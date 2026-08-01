@@ -2,6 +2,7 @@
 #define AIRTAXIMODULEREGISTRY_H
 
 #include <QObject>
+#include <memory>
 
 #include "../services/FlightSimulationService.h"
 #include "FeatureOverviewViewModel.h"
@@ -19,6 +20,9 @@ class AirTaxiModuleRegistry : public QObject
 
 public:
     explicit AirTaxiModuleRegistry(QObject *parent = nullptr);
+    AirTaxiModuleRegistry(IFlightTelemetrySource &telemetrySource,
+                          QObject &telemetryNotifier,
+                          QObject *parent = nullptr);
 
     PrimaryFlightViewModel *primaryFlight() const;
     FeatureOverviewViewModel *propulsion() const;
@@ -27,7 +31,9 @@ public:
     FeatureOverviewViewModel *safety() const;
 
 private:
-    FlightSimulationService m_flightSimulation;
+    std::unique_ptr<FlightSimulationService> m_ownedFlightSimulation;
+    IFlightTelemetrySource *m_telemetrySource;
+    QObject *m_telemetryNotifier;
     PrimaryFlightViewModel m_primaryFlight;
     FeatureOverviewViewModel m_propulsion;
     FeatureOverviewViewModel m_energy;

@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
 Item {
+    id: root
     required property var flightModel
     property string missionTimeText: ""
     property string missionDateText: ""
@@ -20,11 +21,15 @@ Item {
     property real yaw: flightModel.yaw
     property real heading: flightModel.heading
     property real track: flightModel.track
+    implicitHeight: primaryContent.implicitHeight + 16
 
     ColumnLayout {
-        anchors.fill: parent
-        anchors.margins: 8
-        spacing: 5
+        id: primaryContent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 6
+        spacing: 4
 
         RowLayout {
             Layout.fillWidth: true
@@ -32,7 +37,7 @@ Item {
 
             Text {
                 text: "Air Taxi Flight Overview"
-                font.pixelSize: 20
+                font.pixelSize: 18
                 font.bold: true
                 color: "#ffffff"
                 wrapMode: Text.WordWrap
@@ -93,7 +98,7 @@ Item {
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 26
+            Layout.preferredHeight: 24
             radius: 14
             color: "#142636"
             border.color: "#2f4f67"
@@ -133,10 +138,10 @@ Item {
             id: cardGrid
             columns: cardColumns
             Layout.fillWidth: true
-            Layout.fillHeight: true
+            Layout.fillHeight: false
             Layout.alignment: Qt.AlignTop
-            rowSpacing: 8
-            columnSpacing: 8
+            rowSpacing: 6
+            columnSpacing: 6
 
             FlightSimulationCard {
                 cardTitle: "Trip Speed"
@@ -151,8 +156,8 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 196
-                Layout.minimumHeight: 196
+                Layout.preferredHeight: Math.max(200, implicitHeight)
+                Layout.minimumHeight: 200
 
                 RowLayout {
                     spacing: 8
@@ -179,8 +184,8 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 196
-                Layout.minimumHeight: 196
+                Layout.preferredHeight: Math.max(200, implicitHeight)
+                Layout.minimumHeight: 200
 
                 RowLayout {
                     spacing: 8
@@ -207,8 +212,8 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 196
-                Layout.minimumHeight: 196
+                Layout.preferredHeight: Math.max(200, implicitHeight)
+                Layout.minimumHeight: 200
 
                 Text { text: flightSimulation.vsValueText; color: "#e1f3ff"; font.pixelSize: 17; font.bold: true }
                 Text { text: flightSimulation.vsTrendLabel; font.pixelSize: 10; color: "#9ec4f5" }
@@ -227,8 +232,15 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 206
-                Layout.minimumHeight: 206
+                Layout.preferredHeight: {
+                    var cardW = Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
+                    if (cardW < 255)
+                        return Math.max(236, implicitHeight)
+                    if (cardW < 285)
+                        return Math.max(232, implicitHeight)
+                    return Math.max(228, implicitHeight)
+                }
+                Layout.minimumHeight: Layout.preferredHeight
 
                 RowLayout {
                     spacing: 7
@@ -277,20 +289,29 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 196
-                Layout.minimumHeight: 196
+                Layout.preferredHeight: Math.max(200, implicitHeight)
+                Layout.minimumHeight: 200
 
-                RowLayout {
-                    spacing: 7
-                    ColumnLayout {
-                        spacing: 1
-                        Text { text: "Direction"; color: "#98ece8"; font.pixelSize: 9 }
-                        Text { text: Number(heading).toFixed(0) + "°M"; color: "#e1f3ff"; font.pixelSize: 14; font.bold: true }
-                    }
-                    ColumnLayout {
-                        spacing: 1
-                        Text { text: "Route"; color: "#98ece8"; font.pixelSize: 9 }
-                        Text { text: Number(track).toFixed(0) + "°"; color: "#e1f3ff"; font.pixelSize: 14; font.bold: true }
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.minimumHeight: 42
+
+                    RowLayout {
+                        anchors.centerIn: parent
+                        spacing: 7
+
+                        ColumnLayout {
+                            spacing: 1
+                            Text { text: "Direction"; color: "#98ece8"; font.pixelSize: 9 }
+                            Text { text: Number(heading).toFixed(0) + "°M"; color: "#e1f3ff"; font.pixelSize: 14; font.bold: true }
+                        }
+
+                        ColumnLayout {
+                            spacing: 1
+                            Text { text: "Route"; color: "#98ece8"; font.pixelSize: 9 }
+                            Text { text: Number(track).toFixed(0) + "°"; color: "#e1f3ff"; font.pixelSize: 14; font.bold: true }
+                        }
                     }
                 }
             }
@@ -308,8 +329,8 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 206
-                Layout.minimumHeight: 206
+                Layout.preferredHeight: Math.max(212, implicitHeight)
+                Layout.minimumHeight: 212
 
                 Rectangle {
                     Layout.fillWidth: true
@@ -319,17 +340,17 @@ Item {
                     border.width: 1
                     border.color: "#2f4f65"
                     Column {
-                        anchors.fill: parent
-                        anchors.margins: 6
-                        spacing: 4
+                        anchors.centerIn: parent
+                        width: parent.width * 0.9
+                        spacing: 6
                         Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: 100; height: 4; color: "#ff8f70"; radius: 2 }
                         Text {
                             text: "Guidance marker showing route-following quality for this air taxi leg."
                             color: "#ffc9b9"
                             font.pixelSize: 10
                             wrapMode: Text.WordWrap
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            width: parent.width * 0.9
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
                         }
                     }
                 }

@@ -30,6 +30,10 @@ public:
     virtual QColor vsAccentColor() const = 0;
     virtual QString vsTrendLabel() const = 0;
     virtual QString vsValueText() const = 0;
+    virtual double batterySoc() const = 0;
+    virtual QVariantList motorTemperatures() const = 0;
+    virtual double gpsLatitude() const = 0;
+    virtual double gpsLongitude() const = 0;
     virtual QVariantList casHistory() const = 0;
     virtual QVariantList altHistory() const = 0;
     virtual QVariantList vsHistory() const = 0;

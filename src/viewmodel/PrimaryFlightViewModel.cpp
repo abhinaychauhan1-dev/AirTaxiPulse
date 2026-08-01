@@ -34,6 +34,10 @@ QString PrimaryFlightViewModel::flightModeLabel() const { return m_telemetrySour
 QColor PrimaryFlightViewModel::vsAccentColor() const { return m_telemetrySource.vsAccentColor(); }
 QString PrimaryFlightViewModel::vsTrendLabel() const { return m_telemetrySource.vsTrendLabel(); }
 QString PrimaryFlightViewModel::vsValueText() const { return m_telemetrySource.vsValueText(); }
+double PrimaryFlightViewModel::batterySoc() const { return m_telemetrySource.batterySoc(); }
+QVariantList PrimaryFlightViewModel::motorTemperatures() const { return m_telemetrySource.motorTemperatures(); }
+double PrimaryFlightViewModel::gpsLatitude() const { return m_telemetrySource.gpsLatitude(); }
+double PrimaryFlightViewModel::gpsLongitude() const { return m_telemetrySource.gpsLongitude(); }
 QVariantList PrimaryFlightViewModel::casHistory() const { return m_telemetrySource.casHistory(); }
 QVariantList PrimaryFlightViewModel::altHistory() const { return m_telemetrySource.altHistory(); }
 QVariantList PrimaryFlightViewModel::vsHistory() const { return m_telemetrySource.vsHistory(); }

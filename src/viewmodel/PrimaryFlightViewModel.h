@@ -32,6 +32,10 @@ class PrimaryFlightViewModel : public QObject
     Q_PROPERTY(QColor vsAccentColor READ vsAccentColor NOTIFY telemetryChanged)
     Q_PROPERTY(QString vsTrendLabel READ vsTrendLabel NOTIFY telemetryChanged)
     Q_PROPERTY(QString vsValueText READ vsValueText NOTIFY telemetryChanged)
+    Q_PROPERTY(double batterySoc READ batterySoc NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList motorTemperatures READ motorTemperatures NOTIFY telemetryChanged)
+    Q_PROPERTY(double gpsLatitude READ gpsLatitude NOTIFY telemetryChanged)
+    Q_PROPERTY(double gpsLongitude READ gpsLongitude NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList casHistory READ casHistory NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList altHistory READ altHistory NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList vsHistory READ vsHistory NOTIFY telemetryChanged)
@@ -66,6 +70,10 @@ public:
     QColor vsAccentColor() const;
     QString vsTrendLabel() const;
     QString vsValueText() const;
+    double batterySoc() const;
+    QVariantList motorTemperatures() const;
+    double gpsLatitude() const;
+    double gpsLongitude() const;
     QVariantList casHistory() const;
     QVariantList altHistory() const;
     QVariantList vsHistory() const;

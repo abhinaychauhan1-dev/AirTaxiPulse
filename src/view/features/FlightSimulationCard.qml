@@ -5,7 +5,7 @@ import QtQuick.Layouts 1.15
 Item {
     id: root
     implicitWidth: 320
-    implicitHeight: 194
+    implicitHeight: Math.max(186, contentColumn.implicitHeight + 12)
     property string cardTitle: ""
     property string cardSubtitle: ""
     property string iconType: "generic"
@@ -89,17 +89,19 @@ Item {
 
     ColumnLayout {
         id: contentColumn
-        anchors.fill: parent
-        anchors.margins: 7
-        spacing: 4
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: 6
+        spacing: 3
 
         RowLayout {
             Layout.fillWidth: true
             spacing: 7
 
             Rectangle {
-                width: 30
-                height: 30
+                width: 28
+                height: 28
                 radius: 15
                 color: "#14222d"
                 border.color: root.accentColor
@@ -212,7 +214,7 @@ Item {
 
                 Text {
                     text: root.cardTitle
-                    font.pixelSize: 13
+                    font.pixelSize: 12
                     font.bold: true
                     color: "#ffffff"
                     wrapMode: Text.WordWrap
@@ -258,7 +260,7 @@ Item {
             id: sparkline
             visible: root.sparkValues && root.sparkValues.length > 1
             Layout.fillWidth: true
-            Layout.preferredHeight: root.animationStyle === "attitude" ? 38 : (root.animationStyle === "heading" ? 36 : 34)
+            Layout.preferredHeight: root.animationStyle === "attitude" ? 34 : (root.animationStyle === "heading" ? 32 : 30)
             antialiasing: true
 
             onPaint: {
@@ -711,7 +713,7 @@ Item {
             id: progressCanvas
             visible: root.showProgress
             Layout.fillWidth: true
-            Layout.preferredHeight: root.animationStyle === "heading" ? 11 : (root.animationStyle === "attitude" ? 10 : 9)
+            Layout.preferredHeight: root.animationStyle === "heading" ? 10 : (root.animationStyle === "attitude" ? 9 : 8)
             antialiasing: true
 
             onPaint: {
@@ -962,7 +964,7 @@ Item {
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 40
+            Layout.preferredHeight: 34
             radius: 6
             color: "#122536"
             border.color: "#24425a"
@@ -980,7 +982,7 @@ Item {
                     Layout.column: 0
                     Layout.fillWidth: true
                     text: "Status"
-                    font.pixelSize: 8
+                    font.pixelSize: 7
                     color: "#8db2cb"
                 }
 
@@ -991,7 +993,7 @@ Item {
                     Layout.minimumWidth: 66
                     Layout.fillWidth: true
                     text: "Trend"
-                    font.pixelSize: 8
+                    font.pixelSize: 7
                     color: "#8db2cb"
                     horizontalAlignment: Text.AlignRight
                 }
@@ -1001,7 +1003,7 @@ Item {
                     Layout.column: 0
                     Layout.fillWidth: true
                     text: root.confidenceText + " confidence"
-                    font.pixelSize: 10
+                    font.pixelSize: 9
                     color: "#d8ecff"
                     font.bold: true
                 }
@@ -1013,7 +1015,7 @@ Item {
                     Layout.minimumWidth: 66
                     Layout.fillWidth: true
                     text: root.trendText
-                    font.pixelSize: 10
+                    font.pixelSize: 9
                     color: root.accentColor
                     font.bold: true
                     horizontalAlignment: Text.AlignRight
@@ -1023,13 +1025,13 @@ Item {
 
         Item {
             Layout.fillHeight: false
-            Layout.preferredHeight: 4
+            Layout.preferredHeight: 2
         }
 
         ColumnLayout {
             id: customContentColumn
             Layout.fillWidth: true
-            spacing: 3
+            spacing: 2
         }
     }
 }

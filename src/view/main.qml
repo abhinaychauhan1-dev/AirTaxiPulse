@@ -17,7 +17,7 @@ ApplicationWindow {
         var availableHeight = (window.screen && window.screen.availableGeometry)
             ? window.screen.availableGeometry.height
             : Screen.desktopAvailableHeight
-        return Math.max(700, Math.round(availableHeight * 0.88))
+        return Math.max(680, Math.round(availableHeight * 0.87))
     }
     title: qsTr("Air Taxi eVTOL Pulse")
 
@@ -27,6 +27,27 @@ ApplicationWindow {
     property real headerPhase: 0.0
     property bool simPanelHovered: false
     property bool simDetailedMode: false
+    readonly property bool mqttAvailable: (typeof mqttTelemetryAvailable !== "undefined") && mqttTelemetryAvailable
+    readonly property bool mqttConnected: mqttAvailable && mqttTelemetry ? mqttTelemetry.connected : false
+    readonly property int mqttParserWorkers: mqttAvailable && mqttTelemetry ? mqttTelemetry.maxConcurrentParsers : 0
+    readonly property int mqttPendingCap: mqttAvailable && mqttTelemetry ? mqttTelemetry.maxPendingMessages : 0
+    readonly property int mqttDroppedCount: mqttAvailable && mqttTelemetry ? mqttTelemetry.droppedMessageCount : 0
+    readonly property var motorTemps: airTaxiModules.primaryFlight.motorTemperatures
+    readonly property real motorTempAverage: {
+        if (!motorTemps || motorTemps.length === 0)
+            return 0
+        var total = 0
+        for (var i = 0; i < motorTemps.length; ++i)
+            total += Number(motorTemps[i])
+        return total / motorTemps.length
+    }
+    readonly property string gpsText: {
+        var lat = airTaxiModules.primaryFlight.gpsLatitude
+        var lon = airTaxiModules.primaryFlight.gpsLongitude
+        if (!isFinite(lat) || !isFinite(lon))
+            return "N/A"
+        return lat.toFixed(5) + ", " + lon.toFixed(5)
+    }
 
     readonly property int simCruiseKnots: 120 + Math.round(Math.sin(window.headerPhase * 0.9) * 18)
     readonly property int simAltitudeFeet: 1800 + Math.round((Math.sin(window.headerPhase * 0.55) + 1) * 1500)
@@ -78,19 +99,20 @@ ApplicationWindow {
 
         Rectangle {
             width: parent.width
-            height: 80
+            height: 116
             color: "#0b1620"
             border.color: "#4b79a1"
             border.width: 1
 
             RowLayout {
                 anchors.fill: parent
-                anchors.margins: 14
+                anchors.margins: 10
                 spacing: 14
 
                 Rectangle {
                     Layout.preferredWidth: 165
-                    Layout.fillHeight: true
+                    Layout.preferredHeight: 84
+                    Layout.alignment: Qt.AlignVCenter
                     radius: 10
                     color: "#102131"
                     border.color: "#2f4f67"
@@ -99,28 +121,71 @@ ApplicationWindow {
                     ColumnLayout {
                         anchors.fill: parent
                         anchors.margins: 8
-                        spacing: 2
+                        spacing: 3
 
-                        Label {
-                            text: qsTr("Date")
-                            color: "#8fb0c8"
-                            font.pixelSize: 9
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Label {
+                                text: qsTr("DATE")
+                                color: "#8fb0c8"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 28
+                            }
+
+                            Label {
+                                text: window.currentDateText
+                                color: "#d8ebfa"
+                                font.pixelSize: 10
+                                font.bold: true
+                                Layout.fillWidth: true
+                                elide: Label.ElideRight
+                            }
                         }
-                        Label {
-                            text: window.currentDateText
-                            color: "#d8ebfa"
-                            font.pixelSize: 11
-                            font.bold: true
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Label {
+                                text: qsTr("TIME")
+                                color: "#8fb0c8"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 28
+                            }
+
+                            Label {
+                                text: window.currentTimeText
+                                color: "#9dc6e3"
+                                font.pixelSize: 9
+                                Layout.fillWidth: true
+                            }
                         }
-                        Label {
-                            text: window.currentTimeText + "   ETD " + window.elapsedText
-                            color: "#9dc6e3"
-                            font.pixelSize: 10
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Label {
+                                text: qsTr("ETD")
+                                color: "#8fb0c8"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 28
+                            }
+
+                            Label {
+                                text: window.elapsedText
+                                color: "#9dc6e3"
+                                font.pixelSize: 9
+                                Layout.fillWidth: true
+                            }
                         }
                     }
                 }
 
                 ColumnLayout {
+                    Layout.alignment: Qt.AlignVCenter
                     spacing: 1
                     Label {
                         text: qsTr("LIVE OPERATIONS")
@@ -144,9 +209,185 @@ ApplicationWindow {
                 Item { Layout.fillWidth: true }
 
                 Rectangle {
+                    Layout.preferredWidth: 340
+                    Layout.preferredHeight: 90
+                    Layout.alignment: Qt.AlignVCenter
+                    radius: 10
+                    color: "#0f2436"
+                    border.color: mqttConnected ? "#70d28f" : "#4d6d88"
+                    border.width: 1
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        spacing: 3
+
+                        RowLayout {
+                            Layout.fillWidth: true
+
+                            Label {
+                                text: qsTr("MQTT TELEMETRY")
+                                color: "#9bc1df"
+                                font.pixelSize: 9
+                                font.bold: true
+                            }
+
+                            Rectangle {
+                                Layout.alignment: Qt.AlignVCenter
+                                width: 8
+                                height: 8
+                                radius: 4
+                                color: mqttConnected ? "#7ee082" : (mqttAvailable ? "#ffb26f" : "#8a98a8")
+                                border.color: "#d8ebfa"
+                                border.width: 1
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Label {
+                                text: mqttConnected ? qsTr("ONLINE") : (mqttAvailable ? qsTr("OFFLINE") : qsTr("UNAVAILABLE"))
+                                color: mqttConnected ? "#9af0a8" : "#d0dfec"
+                                font.pixelSize: 9
+                                font.bold: true
+                            }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Label {
+                                text: "SoC"
+                                color: "#8fb0c8"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 26
+                            }
+
+                            Label {
+                                text: Math.round(airTaxiModules.primaryFlight.batterySoc) + "%"
+                                color: "#d7e9f9"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 42
+                            }
+
+                            Label {
+                                text: "MTR"
+                                color: "#8fb0c8"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 28
+                            }
+
+                            Label {
+                                text: Math.round(window.motorTempAverage) + " C"
+                                color: "#d7e9f9"
+                                font.pixelSize: 9
+                                Layout.fillWidth: true
+                                elide: Label.ElideRight
+                            }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            Label {
+                                text: "GPS"
+                                color: "#8fb0c8"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 26
+                            }
+
+                            Label {
+                                text: window.gpsText
+                                color: "#b4d3ea"
+                                font.pixelSize: 9
+                                Layout.fillWidth: true
+                                elide: Label.ElideRight
+                            }
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+
+                            Label {
+                                text: "P"
+                                color: "#8fb0c8"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 10
+                            }
+
+                            Label {
+                                text: String(window.mqttParserWorkers)
+                                color: "#9fc5e1"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 20
+                            }
+
+                            Label {
+                                text: "Q"
+                                color: "#8fb0c8"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 10
+                            }
+
+                            Label {
+                                text: String(window.mqttPendingCap)
+                                color: "#9fc5e1"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 36
+                            }
+
+                            Label {
+                                text: "D"
+                                color: "#8fb0c8"
+                                font.pixelSize: 9
+                                Layout.preferredWidth: 10
+                            }
+
+                            Label {
+                                text: String(window.mqttDroppedCount)
+                                color: "#9fc5e1"
+                                font.pixelSize: 9
+                                Layout.fillWidth: true
+                                elide: Label.ElideRight
+                            }
+
+                            ToolButton {
+                                text: "-P"
+                                enabled: mqttAvailable
+                                onClicked: {
+                                    if (mqttTelemetry)
+                                        mqttTelemetry.maxConcurrentParsers = Math.max(1, mqttTelemetry.maxConcurrentParsers - 1)
+                                }
+                            }
+
+                            ToolButton {
+                                text: "+P"
+                                enabled: mqttAvailable
+                                onClicked: {
+                                    if (mqttTelemetry)
+                                        mqttTelemetry.maxConcurrentParsers = Math.min(16, mqttTelemetry.maxConcurrentParsers + 1)
+                                }
+                            }
+
+                            ToolButton {
+                                text: "+Q"
+                                enabled: mqttAvailable
+                                onClicked: {
+                                    if (mqttTelemetry)
+                                        mqttTelemetry.maxPendingMessages = Math.min(4096, mqttTelemetry.maxPendingMessages + 32)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
                     id: simPanel
                     Layout.preferredWidth: 220
-                    Layout.preferredHeight: 60
+                    Layout.preferredHeight: 84
+                    Layout.alignment: Qt.AlignVCenter
                     radius: 10
                     color: window.simPanelHovered ? "#122a3d" : "#102131"
                     border.color: window.simPanelHovered ? "#5f97bf" : "#2f4f67"
@@ -173,8 +414,8 @@ ApplicationWindow {
                         anchors.fill: parent
                         anchors.leftMargin: 7
                         anchors.rightMargin: 7
-                        anchors.topMargin: 16
-                        anchors.bottomMargin: 7
+                        anchors.topMargin: 18
+                        anchors.bottomMargin: 22
                         antialiasing: true
 
                         onPaint: {
@@ -246,44 +487,69 @@ ApplicationWindow {
                         }
                     }
 
-                    Rectangle {
+                    Label {
                         anchors.left: parent.left
                         anchors.leftMargin: 10
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 4
-                        radius: 5
-                        color: "#18344a"
-                        border.color: "#335a76"
-                        border.width: 1
-                        width: 78
-                        height: 15
-
-                        Label {
-                            anchors.centerIn: parent
-                            text: "SPD " + window.simCruiseKnots + " kt"
-                            color: "#cde7fb"
-                            font.pixelSize: 8
-                        }
+                        anchors.top: parent.top
+                        anchors.topMargin: 4
+                        text: qsTr("SIM TRAJECTORY")
+                        color: "#8fb0c8"
+                        font.pixelSize: 9
+                        font.bold: true
                     }
 
-                    Rectangle {
-                        anchors.left: parent.left
-                        anchors.leftMargin: 92
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: 4
-                        radius: 5
-                        color: "#1c3448"
-                        border.color: "#3a607a"
-                        border.width: 1
-                        width: 94
-                        height: 15
+                    Label {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 10
+                        anchors.top: parent.top
+                        anchors.topMargin: 4
+                        text: window.simDetailedMode ? qsTr("DETAIL") : qsTr("STD")
+                        color: window.simDetailedMode ? "#ffcc95" : "#9bc1df"
+                        font.pixelSize: 8
+                    }
 
-                        Label {
-                            anchors.centerIn: parent
-                            text: "ALT " + window.simAltitudeFeet + " ft"
-                            color: "#d9edff"
-                            font.pixelSize: 8
+                    RowLayout {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 10
+                        anchors.bottomMargin: 4
+                        spacing: 4
+
+                        Rectangle {
+                            radius: 5
+                            color: "#18344a"
+                            border.color: "#335a76"
+                            border.width: 1
+                            Layout.preferredWidth: 84
+                            Layout.preferredHeight: 15
+
+                            Label {
+                                anchors.centerIn: parent
+                                text: "SPD " + window.simCruiseKnots + " kt"
+                                color: "#cde7fb"
+                                font.pixelSize: 8
+                            }
                         }
+
+                        Rectangle {
+                            radius: 5
+                            color: "#1c3448"
+                            border.color: "#3a607a"
+                            border.width: 1
+                            Layout.preferredWidth: 98
+                            Layout.preferredHeight: 15
+
+                            Label {
+                                anchors.centerIn: parent
+                                text: "ALT " + window.simAltitudeFeet + " ft"
+                                color: "#d9edff"
+                                font.pixelSize: 8
+                            }
+                        }
+
+                        Item { Layout.fillWidth: true }
                     }
 
                 }
@@ -304,13 +570,13 @@ ApplicationWindow {
 
             ColumnLayout {
                 anchors.fill: parent
-                spacing: 3
+                spacing: 1
 
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 6
-                    Layout.margins: 3
-                    Layout.minimumHeight: 58
+                    Layout.margins: 2
+                    Layout.minimumHeight: 50
 
                     Repeater {
                         model: [

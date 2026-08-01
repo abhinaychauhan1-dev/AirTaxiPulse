@@ -26,6 +26,10 @@ FlightSimulationService::FlightSimulationService(QObject *parent)
     : QObject(parent)
     , m_phase(0.0)
     , m_flightModeLabel(QStringLiteral("Pad Hover Hold"))
+    , m_batterySoc(92.0)
+    , m_motorTemperatures({62.0, 63.5, 61.8, 64.2})
+    , m_gpsLatitude(37.7749)
+    , m_gpsLongitude(-122.4194)
     , m_telemetry()
 {
     appendHistory(m_casHistory, m_telemetry.cas() * 0.96);
@@ -115,6 +119,10 @@ QString FlightSimulationService::vsValueText() const
     const QString sign = m_telemetry.vs() >= 0.0 ? QStringLiteral("+") : QStringLiteral("-");
     return sign + QString::number(qAbs(m_telemetry.vs()), 'f', 0) + QStringLiteral(" ft/min");
 }
+double FlightSimulationService::batterySoc() const { return m_batterySoc; }
+QVariantList FlightSimulationService::motorTemperatures() const { return historyToVariantList(m_motorTemperatures); }
+double FlightSimulationService::gpsLatitude() const { return m_gpsLatitude; }
+double FlightSimulationService::gpsLongitude() const { return m_gpsLongitude; }
 
 QVariantList FlightSimulationService::casHistory() const { return historyToVariantList(m_casHistory); }
 QVariantList FlightSimulationService::altHistory() const { return historyToVariantList(m_altHistory); }
@@ -259,6 +267,16 @@ void FlightSimulationService::updateSimulation()
     m_telemetry.setYaw(newYaw);
     m_telemetry.setHeading(newHeading);
     m_telemetry.setTrack(newTrack);
+
+    m_batterySoc = clamp(m_batterySoc - 0.015, 18.0, 100.0);
+    const double thermalWave = 2.6 * qSin(m_phase * 0.52);
+    for (int i = 0; i < m_motorTemperatures.size(); ++i) {
+        const double phaseOffset = i * 0.4;
+        const double targetMotorTemp = 64.0 + thermalWave + 1.8 * qSin(m_phase * 0.73 + phaseOffset);
+        m_motorTemperatures[i] = approach(m_motorTemperatures[i], targetMotorTemp, 0.8);
+    }
+    m_gpsLatitude += 0.000045 * qCos(qDegreesToRadians(newTrack));
+    m_gpsLongitude += 0.000045 * qSin(qDegreesToRadians(newTrack));
 
     appendHistory(m_casHistory, m_telemetry.cas());
     appendHistory(m_altHistory, m_telemetry.altBaro());

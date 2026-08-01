@@ -1,0 +1,34 @@
+# Qt Creator user-specific files
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+
+# qmake / build artifacts
+build/
+.qmake.stash
+Makefile
+Makefile.*
+object_script.*
+
+# Qt Creator clangd integration cache
+.qtc_clangd/
+
+# Generic build outputs
+*.o
+*.obj
+*.lo
+*.la
+*.a
+*.lib
+*.dll
+*.exe
+*.exp
+*.pdb
+*.ilk
+
+# Qt generated files
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h

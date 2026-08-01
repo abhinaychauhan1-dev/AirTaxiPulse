@@ -16,6 +16,19 @@ HEADERS += \
     src/viewmodel/FeatureOverviewViewModel.h \
     src/viewmodel/PrimaryFlightViewModel.h \
     src/model/FlightTelemetryData.h
+
+contains(QT_CONFIG, mqtt) {
+    QT += mqtt concurrent
+    DEFINES += AIRTAXI_HAS_QT_MQTT
+    SOURCES += \
+        src/services/MqttFlightTelemetryService.cpp \
+        src/services/MqttTelemetryClient.cpp
+    HEADERS += \
+        src/services/MqttFlightTelemetryService.h \
+        src/services/MqttTelemetryClient.h
+} else {
+    message("Qt MQTT module not found. Building without MQTT telemetry support.")
+}
 QML_SOURCES += \
     src/view/main.qml \
     src/view/features/FlightSimulationCard.qml \
