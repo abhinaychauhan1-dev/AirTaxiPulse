@@ -4,6 +4,9 @@ import QtQuick.Layouts 1.15
 
 Item {
     required property var flightModel
+    property string missionTimeText: ""
+    property string missionDateText: ""
+    property string missionEtaText: ""
 
     property int cardColumns: width > 960 ? 3 : (width > 700 ? 2 : 1)
 
@@ -20,20 +23,68 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: 6
+        anchors.margins: 8
+        spacing: 5
 
-        Text {
-            text: "Primary Flight & Navigation Data"
-            font.pixelSize: 20
-            font.bold: true
-            color: "#ffffff"
-            wrapMode: Text.WordWrap
+        RowLayout {
             Layout.fillWidth: true
+            spacing: 8
+
+            Text {
+                text: "Air Taxi Flight Overview"
+                font.pixelSize: 20
+                font.bold: true
+                color: "#ffffff"
+                wrapMode: Text.WordWrap
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Rectangle {
+                Layout.preferredHeight: 28
+                Layout.preferredWidth: 410
+                radius: 8
+                color: "#112637"
+                border.color: "#2f4f67"
+                border.width: 1
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    spacing: 8
+
+                    Label {
+                        text: "Phase: " + flightModel.flightModeLabel
+                        color: "#d7e9f8"
+                        font.pixelSize: 10
+                    }
+
+                    Label {
+                        text: "Date: " + missionDateText
+                        color: "#9fd0f0"
+                        font.pixelSize: 10
+                    }
+
+                    Label {
+                        text: "Time: " + missionTimeText
+                        color: "#d7e9f8"
+                        font.pixelSize: 10
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    Label {
+                        text: "ETA: " + missionEtaText
+                        color: "#7ee082"
+                        font.pixelSize: 10
+                        font.bold: true
+                    }
+                }
+            }
         }
 
         Text {
-            text: "Simulated flight instrumentation for airspeed, altitude, attitude, heading, track and flight path guidance."
+            text: "Live trip status for takeoff, climb, cruise and approach with speed, altitude and route confidence."
             font.pixelSize: 10
             color: "#d7e3ef"
             wrapMode: Text.WordWrap
@@ -50,8 +101,8 @@ Item {
 
             RowLayout {
                 anchors.fill: parent
-                anchors.margins: 7
-                spacing: 8
+                anchors.margins: 6
+                spacing: 7
 
                 Rectangle {
                     width: 10
@@ -83,66 +134,69 @@ Item {
             columns: cardColumns
             Layout.fillWidth: true
             Layout.fillHeight: true
-            rowSpacing: 6
+            Layout.alignment: Qt.AlignTop
+            rowSpacing: 8
             columnSpacing: 8
 
             FlightSimulationCard {
-                cardTitle: "Airspeed (CAS / TAS)"
-                cardSubtitle: "Live speed trend and control margin"
+                cardTitle: "Trip Speed"
+                cardSubtitle: "Lift-off and cruise speed during your air taxi ride"
                 iconType: "speed"
                 accentColor: "#72b8e6"
                 motionSeed: 0.15
                 motionRate: 0.021
                 progressValue: flightModel.casProgress
-                progressLabel: "CAS / TAS dynamics"
+                progressLabel: "Speed confidence"
                 sparkValues: flightModel.casHistory
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 178
-                Layout.alignment: Qt.AlignTop
+                Layout.preferredHeight: 196
+                Layout.minimumHeight: 196
 
                 RowLayout {
-                    spacing: 10
-                    Label { text: "CAS"; color: "#9ec4f5"; font.pixelSize: 10 }
+                    spacing: 8
+                    Label { text: "Lift-off"; color: "#9ec4f5"; font.pixelSize: 9 }
                     Text { text: Number(cas).toFixed(0) + " kt"; color: "#e1f3ff"; font.pixelSize: 16; font.bold: true }
                 }
                 RowLayout {
-                    spacing: 10
-                    Label { text: "TAS"; color: "#9ec4f5"; font.pixelSize: 10 }
+                    spacing: 8
+                    Label { text: "Cruise"; color: "#9ec4f5"; font.pixelSize: 9 }
                     Text { text: Number(tas).toFixed(0) + " kt"; color: "#e1f3ff"; font.pixelSize: 16; font.bold: true }
                 }
             }
 
             FlightSimulationCard {
-                cardTitle: "Altitude"
-                cardSubtitle: "Barometric and radar altitude"
+                cardTitle: "Altitude Window"
+                cardSubtitle: "Current cabin altitude profile and clearance"
                 iconType: "altitude"
                 accentColor: "#88c5ff"
                 motionSeed: 1.35
                 motionRate: 0.029
                 progressValue: flightModel.altProgress
-                progressLabel: "Altitude envelope"
+                progressLabel: "Altitude confidence"
                 sparkValues: flightModel.altHistory
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 178
-                Layout.alignment: Qt.AlignTop
+                Layout.preferredHeight: 196
+                Layout.minimumHeight: 196
 
                 RowLayout {
-                    spacing: 10
-                    Label { text: "Baro"; color: "#9ec4f5"; font.pixelSize: 10 }
+                    spacing: 8
+                    Label { text: "Flight level"; color: "#9ec4f5"; font.pixelSize: 9 }
                     Text { text: Number(altBaro).toFixed(0) + " ft"; color: "#e1f3ff"; font.pixelSize: 16; font.bold: true }
                 }
                 RowLayout {
-                    spacing: 10
-                    Label { text: "Radar"; color: "#9ec4f5"; font.pixelSize: 10 }
+                    spacing: 8
+                    Label { text: "Ground gap"; color: "#9ec4f5"; font.pixelSize: 9 }
                     Text { text: Number(altRadar).toFixed(0) + " ft"; color: "#e1f3ff"; font.pixelSize: 16; font.bold: true }
                 }
             }
 
             FlightSimulationCard {
-                cardTitle: "Vertical Speed"
-                cardSubtitle: "Climb and descent rate"
+                cardTitle: "Climb and Descent"
+                cardSubtitle: "How fast the air taxi is rising or lowering"
                 iconType: "vertical"
                 accentColor: flightModel.vsAccentColor
                 motionSeed: 2.05
@@ -151,50 +205,52 @@ Item {
                 progressLabel: flightModel.vsTrendLabel
                 sparkValues: flightModel.vsHistory
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 178
-                Layout.alignment: Qt.AlignTop
+                Layout.preferredHeight: 196
+                Layout.minimumHeight: 196
 
                 Text { text: flightSimulation.vsValueText; color: "#e1f3ff"; font.pixelSize: 17; font.bold: true }
-                Text { text: flightSimulation.vsTrendLabel; font.pixelSize: 11; color: "#9ec4f5" }
+                Text { text: flightSimulation.vsTrendLabel; font.pixelSize: 10; color: "#9ec4f5" }
             }
 
             FlightSimulationCard {
-                cardTitle: "Attitude Indicator"
-                cardSubtitle: "Pitch, roll and yaw stability"
+                cardTitle: "Ride Stability"
+                cardSubtitle: "Cabin balance and comfort during the trip"
                 iconType: "attitude"
-                accentColor: "#74b2e0"
+                accentColor: "#f2b15d"
                 motionSeed: 3.0
                 motionRate: 0.037
                 progressValue: flightModel.attitudeProgress
-                progressLabel: "Attitude load"
+                progressLabel: "Comfort stability"
                 sparkValues: flightModel.attitudeHistory
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 188
-                Layout.alignment: Qt.AlignTop
+                Layout.preferredHeight: 206
+                Layout.minimumHeight: 206
 
                 RowLayout {
-                    spacing: 8
+                    spacing: 7
                     ColumnLayout {
-                        spacing: 2
-                        Text { text: "Pitch"; color: "#9ec4f5"; font.pixelSize: 10 }
+                        spacing: 1
+                        Text { text: "Nose tilt"; color: "#9ec4f5"; font.pixelSize: 9 }
                         Text { text: Number(pitch).toFixed(1) + "°"; color: "#e1f3ff"; font.pixelSize: 14; font.bold: true }
                     }
                     ColumnLayout {
-                        spacing: 2
-                        Text { text: "Roll"; color: "#9ec4f5"; font.pixelSize: 10 }
+                        spacing: 1
+                        Text { text: "Side tilt"; color: "#9ec4f5"; font.pixelSize: 9 }
                         Text { text: Number(roll).toFixed(1) + "°"; color: "#e1f3ff"; font.pixelSize: 14; font.bold: true }
                     }
                     ColumnLayout {
-                        spacing: 2
-                        Text { text: "Yaw"; color: "#9ec4f5"; font.pixelSize: 10 }
+                        spacing: 1
+                        Text { text: "Yaw turn"; color: "#9ec4f5"; font.pixelSize: 9 }
                         Text { text: Number(yaw).toFixed(1) + "°"; color: "#e1f3ff"; font.pixelSize: 14; font.bold: true }
                     }
                 }
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 40
+                    height: 32
                     color: "#0f1f2e"
                     radius: 8
                     border.color: "#2f4f65"
@@ -202,73 +258,75 @@ Item {
                     Row {
                         anchors.centerIn: parent
                         spacing: 3
-                        Rectangle { width: 8; height: 20; color: "#74b2e0"; radius: 4 }
-                        Text { text: "Horizon"; color: "#9ec4f5"; font.pixelSize: 11 }
+                        Rectangle { width: 8; height: 16; color: "#f2b15d"; radius: 4 }
+                        Text { text: "Cabin balance"; color: "#f7d7a5"; font.pixelSize: 10 }
                     }
                 }
             }
 
             FlightSimulationCard {
-                cardTitle: "Heading & Track"
-                cardSubtitle: "Directional control and drift"
+                cardTitle: "Route Direction"
+                cardSubtitle: "Current heading and route alignment"
                 iconType: "heading"
-                accentColor: "#9ec4f5"
+                accentColor: "#66d7d1"
                 motionSeed: 4.1
                 motionRate: 0.019
                 progressValue: flightModel.headingProgress
-                progressLabel: "Track alignment"
+                progressLabel: "Route alignment"
                 sparkValues: flightModel.headingHistory
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 178
-                Layout.alignment: Qt.AlignTop
+                Layout.preferredHeight: 196
+                Layout.minimumHeight: 196
 
                 RowLayout {
-                    spacing: 8
+                    spacing: 7
                     ColumnLayout {
-                        spacing: 2
-                        Text { text: "Heading"; color: "#9ec4f5"; font.pixelSize: 10 }
+                        spacing: 1
+                        Text { text: "Direction"; color: "#98ece8"; font.pixelSize: 9 }
                         Text { text: Number(heading).toFixed(0) + "°M"; color: "#e1f3ff"; font.pixelSize: 14; font.bold: true }
                     }
                     ColumnLayout {
-                        spacing: 2
-                        Text { text: "Track"; color: "#9ec4f5"; font.pixelSize: 10 }
+                        spacing: 1
+                        Text { text: "Route"; color: "#98ece8"; font.pixelSize: 9 }
                         Text { text: Number(track).toFixed(0) + "°"; color: "#e1f3ff"; font.pixelSize: 14; font.bold: true }
                     }
                 }
             }
 
             FlightSimulationCard {
-                cardTitle: "Flight Path Vector (FPV)"
-                cardSubtitle: "Trajectory and path guidance"
+                cardTitle: "Path Guidance"
+                cardSubtitle: "How closely the vehicle follows the planned path"
                 iconType: "fpv"
-                accentColor: "#6ec8ff"
+                accentColor: "#ff8f70"
                 motionSeed: 5.2
                 motionRate: 0.051
                 progressValue: flightModel.fpvProgress
-                progressLabel: "Path deviation"
+                progressLabel: "Path confidence"
                 sparkValues: flightModel.fpvHistory
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 Layout.preferredWidth: Math.max(220, Math.min(320, cardGrid.width / cardColumns - 12))
-                Layout.preferredHeight: 178
-                Layout.alignment: Qt.AlignTop
+                Layout.preferredHeight: 206
+                Layout.minimumHeight: 206
 
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 80
+                    height: 64
                     color: "#0f1f2e"
                     radius: 8
                     border.width: 1
                     border.color: "#2f4f65"
                     Column {
                         anchors.fill: parent
-                        anchors.margins: 8
-                        spacing: 6
-                        Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: 100; height: 4; color: "#74b2e0"; radius: 2 }
+                        anchors.margins: 6
+                        spacing: 4
+                        Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: 100; height: 4; color: "#ff8f70"; radius: 2 }
                         Text {
-                            text: "Trajectory marker aligned with current attitude and track."
-                            color: "#9ec4f5"
-                            font.pixelSize: 11
+                            text: "Guidance marker showing route-following quality for this air taxi leg."
+                            color: "#ffc9b9"
+                            font.pixelSize: 10
                             wrapMode: Text.WordWrap
                             anchors.horizontalCenter: parent.horizontalCenter
                             width: parent.width * 0.9
