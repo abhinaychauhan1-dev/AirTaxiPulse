@@ -11,14 +11,15 @@ Item {
     readonly property var flightModel: root.moduleRegistry.primaryFlight
     property bool autopilotEngaged: true
     property int guidanceMode: 0
-        property int commandedFlightMode: -1
+    property int commandedFlightMode: -1
+    property bool automaticRouteSequence: true
     property int selectedWaypoint: 1
     property int hoveredWaypoint: -1
     property real animationPhase: 0.0
-        property real manualLeftElevon: 0.0
-        property real manualRightElevon: 0.0
-        property real manualRuddervator: 0.0
-        property real manualTiltActuator: 45.0
+    property real manualLeftElevon: 0.0
+    property real manualRightElevon: 0.0
+    property real manualRuddervator: 0.0
+    property real manualTiltActuator: 45.0
     property var waypoints: [
         { code: "PAD A", name: "Downtown Vertiport", latitude: 37.7749, longitude: -122.4194 },
         { code: "TRN-1", name: "Transition Gate", latitude: 37.7792, longitude: -122.4124 },
@@ -52,9 +53,14 @@ Item {
     readonly property real rightElevon: root.autopilotEngaged ? root.telemetryRightElevon : root.manualRightElevon
     readonly property real ruddervator: root.autopilotEngaged ? root.telemetryRuddervator : root.manualRuddervator
     readonly property real tiltActuator: root.autopilotEngaged ? root.telemetryTiltActuator : root.manualTiltActuator
+    readonly property int automaticWaypoint: Math.min(root.waypoints.length - 1, root.flightModeIndex + 1)
+    readonly property int navigationWaypoint: root.automaticRouteSequence
+                                              ? root.automaticWaypoint : root.selectedWaypoint
     readonly property int activeWaypoint: root.hoveredWaypoint >= 0
-                                          ? root.hoveredWaypoint : root.selectedWaypoint
-    readonly property real nextWaypointDistance: root.distanceToWaypoint(root.activeWaypoint)
+                                          ? root.hoveredWaypoint : root.navigationWaypoint
+    readonly property real nextWaypointDistance: root.distanceToWaypoint(root.navigationWaypoint)
+    readonly property string routeLegStatus: root.automaticRouteSequence
+                                              ? "AUTO SEQUENCE" : "DIRECT TO"
 
     function clamp(value, minimum, maximum) {
         return Math.max(minimum, Math.min(maximum, value))
@@ -104,6 +110,21 @@ Item {
             root.manualRuddervator = boundedValue
         else
             root.manualTiltActuator = boundedValue
+    }
+
+    function selectDirectTo(index) {
+        root.selectedWaypoint = index
+        root.automaticRouteSequence = false
+        root.guidanceMode = 0
+        root.hoveredWaypoint = -1
+        routeCanvas.requestPaint()
+    }
+
+    function resumeAutomaticRoute() {
+        root.automaticRouteSequence = true
+        root.selectedWaypoint = root.automaticWaypoint
+        root.guidanceMode = 0
+        routeCanvas.requestPaint()
     }
 
     function distanceToWaypoint(index) {
@@ -514,6 +535,24 @@ Item {
                             Layout.fillWidth: true
                             Label { text: "FLIGHT PLAN & ACTIVE ROUTE"; color: "#e0b66d"; font.pixelSize: 10; font.bold: true }
                             Item { Layout.fillWidth: true }
+                            Rectangle {
+                                Layout.preferredWidth: 76
+                                Layout.preferredHeight: 20
+                                color: root.automaticRouteSequence ? "#1d4a43" : "#4b3822"
+                                border.color: root.automaticRouteSequence ? "#62cbb1" : "#deb15e"
+                                Label {
+                                    anchors.centerIn: parent
+                                    text: root.routeLegStatus
+                                    color: root.automaticRouteSequence ? "#c9f5e8" : "#f5d18a"
+                                    font.pixelSize: 7
+                                    font.bold: true
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.resumeAutomaticRoute()
+                                }
+                            }
                             Label { text: "TRACK " + Number(root.flightModel.track).toFixed(0) + "°"; color: "#82b8c7"; font.pixelSize: 8; font.bold: true }
                         }
 
@@ -582,8 +621,8 @@ Item {
                                 ColumnLayout {
                                     Layout.fillWidth: true
                                     spacing: 0
-                                    Label { text: "NEXT WAYPOINT"; color: "#718e95"; font.pixelSize: 7 }
-                                    Text { Layout.fillWidth: true; text: root.waypoints[root.activeWaypoint].code; color: "#ffd481"; font.pixelSize: 16; font.bold: true }
+                                    Label { text: root.automaticRouteSequence ? "NEXT WAYPOINT" : "DIRECT TO"; color: "#718e95"; font.pixelSize: 7 }
+                                    Text { Layout.fillWidth: true; text: root.waypoints[root.navigationWaypoint].code; color: "#ffd481"; font.pixelSize: 16; font.bold: true }
                                 }
                                 ColumnLayout {
                                     spacing: 0
@@ -602,14 +641,14 @@ Item {
                                     Layout.fillHeight: true
                                     Layout.minimumHeight: 22
                                     color: root.activeWaypoint === waypointRow.index ? "#294b51" : "#182b31"
-                                    border.color: root.selectedWaypoint === waypointRow.index ? "#e5ba68" : "#294047"
-                                    border.width: root.selectedWaypoint === waypointRow.index ? 2 : 1
+                                    border.color: root.navigationWaypoint === waypointRow.index ? "#e5ba68" : "#294047"
+                                    border.width: root.navigationWaypoint === waypointRow.index ? 2 : 1
 
                                     RowLayout {
                                         anchors.fill: parent
                                         anchors.margins: 5
                                         spacing: 6
-                                        Rectangle { Layout.preferredWidth: 7; Layout.preferredHeight: 7; radius: 4; color: waypointRow.index < root.selectedWaypoint ? "#5fc89d" : (waypointRow.index === root.selectedWaypoint ? "#f0c46d" : "#48656d") }
+                                        Rectangle { Layout.preferredWidth: 7; Layout.preferredHeight: 7; radius: 4; color: waypointRow.index < root.navigationWaypoint ? "#5fc89d" : (waypointRow.index === root.navigationWaypoint ? "#f0c46d" : "#48656d") }
                                         Label { text: waypointRow.modelData.code; color: "#dcecee"; font.pixelSize: 8; font.bold: true; Layout.preferredWidth: 42 }
                                         Label { Layout.fillWidth: true; text: waypointRow.modelData.name; color: "#78959b"; font.pixelSize: 7; elide: Text.ElideRight }
                                     }
@@ -620,7 +659,7 @@ Item {
                                         cursorShape: Qt.PointingHandCursor
                                         onEntered: root.hoveredWaypoint = waypointRow.index
                                         onExited: if (root.hoveredWaypoint === waypointRow.index) root.hoveredWaypoint = -1
-                                        onClicked: root.selectedWaypoint = waypointRow.index
+                                        onClicked: root.selectDirectTo(waypointRow.index)
                                     }
                                 }
                             }

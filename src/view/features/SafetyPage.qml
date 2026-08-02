@@ -14,6 +14,9 @@ Item {
     property int noiseLimit: 75
     property var noiseHistory: [63, 65, 64, 67, 69, 68, 70, 72, 71, 69, 68, 70]
     property int parachuteState: 0
+    property real parachuteProgress: 0.0
+    property bool parachuteTestOverride: false
+    property string parachuteEventTime: "--:--:--"
     property int selectedTraffic: 0
     property int radarRange: 5
     property bool gnssTestMode: false
@@ -42,6 +45,14 @@ Item {
                                                         - Math.abs(root.verticalDeviation) * 12, 0, 100)
     readonly property bool landingPhase: String(root.flightModel.flightModeLabel).indexOf("Arrival") >= 0
                                          || Number(root.flightModel.altRadar) < 150
+    readonly property bool parachuteEnvelopeValid: Number(root.flightModel.altRadar) >= 100
+                                                    && Number(root.flightModel.cas) >= 15
+                                                    && Number(root.flightModel.cas) <= 150
+    readonly property bool parachuteDeployAllowed: root.parachuteState === 1
+                                                   && (root.parachuteEnvelopeValid || root.parachuteTestOverride)
+    readonly property string parachuteInhibitReason: Number(root.flightModel.altRadar) < 100 ? "INHIBIT: RADAR ALT < 100 FT"
+                                                       : (Number(root.flightModel.cas) < 15 ? "INHIBIT: AIRSPEED < 15 KT"
+                                                       : (Number(root.flightModel.cas) > 150 ? "INHIBIT: AIRSPEED > 150 KT" : "DEPLOYMENT ENVELOPE VALID"))
     readonly property int alertCount: (root.noiseWarning ? 1 : 0)
                                       + (!root.raimAvailable ? 1 : 0)
                                       + (root.trafficRange(root.selectedTraffic) < 1.0 ? 1 : 0)
@@ -67,7 +78,9 @@ Item {
         if (index === 0)
             return root.acousticDb.toFixed(1) + " dBA  |  LIMIT " + root.noiseLimit + " dBA"
         if (index === 1)
-            return root.parachuteState === 0 ? "SYSTEM SAFE" : (root.parachuteState === 1 ? "ARMED / READY" : "DEPLOYED")
+            return root.parachuteState === 0 ? "SYSTEM SAFE"
+                   : (root.parachuteState === 1 ? "ARMED / READY"
+                   : (root.parachuteState === 2 ? "DEPLOYING " + Math.round(root.parachuteProgress * 100) + "%" : "DEPLOYED"))
         if (index === 2)
             return root.trafficCode(root.selectedTraffic) + "  |  " + root.trafficRange(root.selectedTraffic).toFixed(1) + " NM"
         if (index === 3)
@@ -90,6 +103,45 @@ Item {
 
     function trafficBearing(index) {
         return [38, 218, 312][index] + 8 * Math.sin(root.simulationPhase * 0.5 + index)
+    }
+
+    function toggleParachuteArm() {
+        root.selectedMonitor = 1
+        if (root.parachuteState === 0) {
+            root.parachuteState = 1
+            root.parachuteEventTime = Qt.formatTime(new Date(), "hh:mm:ss")
+        } else if (root.parachuteState === 1) {
+            root.parachuteState = 0
+            root.parachuteEventTime = Qt.formatTime(new Date(), "hh:mm:ss")
+        }
+    }
+
+    function deployOrResetParachute() {
+        root.selectedMonitor = 1
+        if (root.parachuteState === 3) {
+            root.parachuteState = 0
+            root.parachuteProgress = 0
+            root.parachuteTestOverride = false
+            root.parachuteEventTime = Qt.formatTime(new Date(), "hh:mm:ss")
+        } else if (root.parachuteDeployAllowed) {
+            root.parachuteProgress = 0
+            root.parachuteState = 2
+            root.parachuteEventTime = Qt.formatTime(new Date(), "hh:mm:ss")
+        }
+    }
+
+    Timer {
+        interval: 80
+        running: root.parachuteState === 2
+        repeat: true
+        onTriggered: {
+            root.parachuteProgress = Math.min(1, root.parachuteProgress + 0.035)
+            parachuteCanvas.requestPaint()
+            if (root.parachuteProgress >= 1) {
+                root.parachuteState = 3
+                root.parachuteEventTime = Qt.formatTime(new Date(), "hh:mm:ss")
+            }
+        }
     }
 
     Timer {
@@ -306,7 +358,22 @@ Item {
                         Layout.fillWidth: true
                         Label { text: "BALLISTIC PARACHUTE"; color: "#dfaa78"; font.pixelSize: 10; font.bold: true }
                         Item { Layout.fillWidth: true }
-                        Label { text: root.parachuteState === 0 ? "SAFE" : (root.parachuteState === 1 ? "ARMED" : "DEPLOYED"); color: root.parachuteState === 0 ? "#7fa3a0" : (root.parachuteState === 1 ? "#f1c26f" : "#ff776b"); font.pixelSize: 8; font.bold: true }
+                        Rectangle {
+                            Layout.preferredWidth: 58
+                            Layout.preferredHeight: 18
+                            color: root.parachuteTestOverride ? "#513b24" : "#17282c"
+                            border.color: root.parachuteTestOverride ? "#e0aa59" : "#3b5053"
+                            Label { anchors.centerIn: parent; text: root.parachuteTestOverride ? "TEST ON" : "TEST OFF"; color: root.parachuteTestOverride ? "#ffd28a" : "#789092"; font.pixelSize: 7; font.bold: true }
+                            MouseArea { anchors.fill: parent; enabled: root.parachuteState < 2; cursorShape: Qt.PointingHandCursor; onClicked: root.parachuteTestOverride = !root.parachuteTestOverride }
+                        }
+                        Label {
+                            text: root.parachuteState === 0 ? "SAFE"
+                                  : (root.parachuteState === 1 ? "ARMED"
+                                  : (root.parachuteState === 2 ? "DEPLOYING" : "DEPLOYED"))
+                            color: root.parachuteState === 0 ? "#7fa3a0" : (root.parachuteState === 1 ? "#f1c26f" : "#ff776b")
+                            font.pixelSize: 8
+                            font.bold: true
+                        }
                     }
                     Item {
                         Layout.fillWidth: true
@@ -318,11 +385,56 @@ Item {
                             onPaint: {
                                 var context = getContext("2d")
                                 context.clearRect(0, 0, width, height)
-                                context.strokeStyle = root.parachuteState === 2 ? "#ff796d" : "#d6a46f"; context.lineWidth = 2
-                                context.beginPath(); context.arc(width / 2, height * 0.42, Math.min(width, height) * 0.26, Math.PI, Math.PI * 2); context.stroke()
-                                context.beginPath(); context.moveTo(width * 0.24, height * 0.42); context.lineTo(width * 0.44, height * 0.76); context.lineTo(width * 0.56, height * 0.76); context.lineTo(width * 0.76, height * 0.42); context.stroke()
-                                context.fillStyle = root.parachuteState === 2 ? "#ff796d" : "#73878a"; context.fillRect(width * 0.44, height * 0.75, width * 0.12, height * 0.08)
+                                var visualProgress = root.parachuteState === 3 ? 1 : (root.parachuteState === 2 ? root.parachuteProgress : 0.18)
+                                var centerX = width / 2
+                                var aircraftY = height * 0.78
+                                var canopyY = aircraftY - height * (0.12 + visualProgress * 0.48)
+                                var canopyRadius = Math.min(width, height) * (0.08 + visualProgress * 0.23)
+                                var activeColor = root.parachuteState >= 2 ? "#ff796d" : "#d6a46f"
+
+                                context.strokeStyle = activeColor
+                                context.lineWidth = 2
+                                context.beginPath()
+                                context.arc(centerX, canopyY, canopyRadius, Math.PI, Math.PI * 2)
+                                context.stroke()
+
+                                context.beginPath()
+                                context.moveTo(centerX - canopyRadius, canopyY)
+                                context.lineTo(centerX - width * 0.06, aircraftY)
+                                context.moveTo(centerX + canopyRadius, canopyY)
+                                context.lineTo(centerX + width * 0.06, aircraftY)
+                                context.stroke()
+
+                                if (root.parachuteState === 2) {
+                                    context.strokeStyle = "rgba(255, 121, 109, 0.45)"
+                                    context.lineWidth = 1
+                                    context.beginPath()
+                                    context.arc(centerX, canopyY, canopyRadius + 5 + 4 * Math.sin(root.parachuteProgress * Math.PI * 8), Math.PI, Math.PI * 2)
+                                    context.stroke()
+                                }
+
+                                context.fillStyle = root.parachuteState >= 2 ? "#ff796d" : "#73878a"
+                                context.fillRect(centerX - width * 0.06, aircraftY, width * 0.12, height * 0.08)
+
+                                if (root.parachuteState === 2) {
+                                    context.fillStyle = "#f6c3b9"
+                                    context.font = "bold 9px sans-serif"
+                                    context.textAlign = "center"
+                                    context.fillText(Math.round(root.parachuteProgress * 100) + "%", centerX, height * 0.16)
+                                }
                             }
+                        }
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 5
+                        color: "#273638"
+                        visible: root.parachuteState >= 2
+                        Rectangle {
+                            width: parent.width * root.parachuteProgress
+                            height: parent.height
+                            color: "#ff796d"
+                            Behavior on width { NumberAnimation { duration: 70 } }
                         }
                     }
                     RowLayout {
@@ -334,18 +446,30 @@ Item {
                             color: root.parachuteState === 1 ? "#654c28" : "#1a2b2f"
                             border.color: "#c99757"
                             Label { anchors.centerIn: parent; text: root.parachuteState === 1 ? "DISARM" : "ARM SYSTEM"; color: "#f0c887"; font.pixelSize: 8; font.bold: true }
-                            MouseArea { anchors.fill: parent; enabled: root.parachuteState !== 2; cursorShape: Qt.PointingHandCursor; onClicked: { root.selectedMonitor = 1; root.parachuteState = root.parachuteState === 1 ? 0 : 1 } }
+                            MouseArea { anchors.fill: parent; enabled: root.parachuteState < 2; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.toggleParachuteArm() }
                         }
                         Rectangle {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 27
-                            color: root.parachuteState === 1 ? "#642e28" : "#202a2d"
-                            border.color: root.parachuteState === 1 ? "#ff796d" : "#455457"
-                            Label { anchors.centerIn: parent; text: root.parachuteState === 2 ? "RESET" : "DEPLOY"; color: root.parachuteState === 1 ? "#ffd3cd" : "#778689"; font.pixelSize: 8; font.bold: true }
-                            MouseArea { anchors.fill: parent; enabled: root.parachuteState !== 0; cursorShape: Qt.PointingHandCursor; onClicked: { root.selectedMonitor = 1; root.parachuteState = root.parachuteState === 2 ? 0 : 2 } }
+                            color: root.parachuteDeployAllowed ? "#642e28" : (root.parachuteState === 3 ? "#463b25" : "#202a2d")
+                            border.color: root.parachuteDeployAllowed ? "#ff796d" : (root.parachuteState === 3 ? "#d5a95d" : "#455457")
+                            Label { anchors.centerIn: parent; text: root.parachuteState === 3 ? "SIM RESET" : (root.parachuteState === 2 ? "DEPLOYING" : "DEPLOY"); color: root.parachuteDeployAllowed || root.parachuteState === 3 ? "#ffd3cd" : "#778689"; font.pixelSize: 8; font.bold: true }
+                            MouseArea { anchors.fill: parent; enabled: root.parachuteDeployAllowed || root.parachuteState === 3; cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: root.deployOrResetParachute() }
                         }
                     }
-                    Label { Layout.fillWidth: true; text: "SQUIB A/B  READY   |   CANOPY  SERVICEABLE"; color: "#71898a"; font.pixelSize: 7; horizontalAlignment: Text.AlignHCenter }
+                    Label {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 10
+                        text: root.parachuteState === 2 ? "CANOPY EXTRACTION IN PROGRESS"
+                              : (root.parachuteState === 3 ? "DEPLOYED AT " + root.parachuteEventTime + "  |  SIMULATION RESET AVAILABLE"
+                              : (root.parachuteTestOverride ? "TEST OVERRIDE ACTIVE  |  SQUIB A/B READY"
+                              : root.parachuteInhibitReason + "  |  SQUIB A/B READY"))
+                        color: root.parachuteEnvelopeValid || root.parachuteTestOverride ? "#7fb7a9" : "#c18d62"
+                        font.pixelSize: 7
+                        minimumPixelSize: 6
+                        fontSizeMode: Text.Fit
+                        horizontalAlignment: Text.AlignHCenter
+                    }
                 }
             }
 
