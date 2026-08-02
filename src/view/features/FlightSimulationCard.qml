@@ -9,6 +9,7 @@ Item {
     property string cardTitle: ""
     property string cardSubtitle: ""
     property string iconType: "generic"
+    property string visualTheme: "default"
     property color accentColor: "#74b2e0"
     property real progressValue: 0.0
     property string progressLabel: ""
@@ -38,7 +39,7 @@ Item {
 
     property bool hovered: false
 
-    readonly property string animationStyle: root.iconType
+    readonly property string animationStyle: root.visualTheme === "propulsion" ? "propulsion" : root.iconType
 
     scale: hovered ? 1.01 : 1.0
 
@@ -194,6 +195,20 @@ Item {
                             ctx.beginPath()
                             ctx.moveTo(13, 19)
                             ctx.lineTo(17, 15)
+                            ctx.stroke()
+                        } else if (root.iconType === "propulsion") {
+                            ctx.beginPath()
+                            ctx.arc(15, 15, 7.2, 0, Math.PI * 2)
+                            ctx.stroke()
+                            ctx.beginPath()
+                            ctx.moveTo(15, 7)
+                            ctx.lineTo(15, 23)
+                            ctx.moveTo(7, 15)
+                            ctx.lineTo(23, 15)
+                            ctx.moveTo(9.5, 9.5)
+                            ctx.lineTo(20.5, 20.5)
+                            ctx.moveTo(20.5, 9.5)
+                            ctx.lineTo(9.5, 20.5)
                             ctx.stroke()
                         } else {
                             ctx.beginPath()
@@ -615,6 +630,33 @@ Item {
                     ctx.strokeStyle = "rgba(225, 246, 255, 0.65)"
                     ctx.lineWidth = 1
                     ctx.stroke()
+                } else if (style === "propulsion") {
+                    ctx.strokeStyle = "rgba(115, 198, 255, 0.16)"
+                    ctx.lineWidth = 1
+                    for (var p = 0; p <= 6; ++p) {
+                        var pY = 4 + p * (height - 8) / 6
+                        ctx.beginPath()
+                        ctx.moveTo(0, pY)
+                        ctx.lineTo(width, pY)
+                        ctx.stroke()
+                    }
+
+                    for (var b = 0; b < values.length; ++b) {
+                        var propulsionNormalized = (values[b] - minValue) / (maxValue - minValue)
+                        var propulsionBarHeight = 3 + propulsionNormalized * (height - 8)
+                        var propulsionX = b * step - 2.2
+                        var propulsionY = height - 4 - propulsionBarHeight
+                        ctx.fillStyle = b === values.length - 1 ? "rgba(220, 245, 255, 0.96)" : "rgba(116, 194, 255, 0.78)"
+                        ctx.fillRect(propulsionX, propulsionY, 4.4, propulsionBarHeight)
+                    }
+
+                    var propulsionSweep = (root.motionPhase / (Math.PI * 2)) * width
+                    ctx.strokeStyle = "rgba(234, 247, 255, 0.8)"
+                    ctx.lineWidth = 1.2
+                    ctx.beginPath()
+                    ctx.moveTo(propulsionSweep, 2)
+                    ctx.lineTo(propulsionSweep, height - 2)
+                    ctx.stroke()
                 } else {
                     ctx.beginPath()
                     for (var j = 0; j < values.length; ++j) {
@@ -935,6 +977,30 @@ Item {
                     ctx.moveTo(5, height * 0.5)
                     ctx.lineTo(width - 5, height * 0.5)
                     ctx.stroke()
+                } else if (style === "propulsion") {
+                    var coilSegments = 12
+                    var coilWidth = (width - 2) / coilSegments
+                    for (var cg = 0; cg < coilSegments; ++cg) {
+                        var coilX = 1 + cg * coilWidth
+                        var coilFill = Math.min(1.0, Math.max(0.0, pct - (cg / coilSegments) * 0.35))
+                        var coilHeight = Math.max(2, (height - 2) * Math.min(1.0, coilFill))
+                        var coilY = height - 1 - coilHeight
+                        ctx.fillStyle = cg % 2 === 0 ? "rgba(112, 198, 255, 0.8)" : "rgba(216, 244, 255, 0.92)"
+                        roundRect(ctx, coilX + 1, coilY, Math.max(2, coilWidth - 2), coilHeight, 3)
+                        ctx.fill()
+                    }
+
+                    ctx.strokeStyle = "rgba(218, 243, 255, 0.42)"
+                    ctx.lineWidth = 1
+                    ctx.beginPath()
+                    ctx.moveTo(Math.max(1, fillWidth - 3), 1)
+                    ctx.lineTo(Math.max(1, fillWidth - 3), height - 1)
+                    ctx.stroke()
+
+                    ctx.beginPath()
+                    ctx.arc(fillWidth, height * 0.5, 2.6, 0, Math.PI * 2)
+                    ctx.fillStyle = "rgba(230, 247, 255, 0.9)"
+                    ctx.fill()
                 } else {
                     ctx.fillStyle = root.accentColor
                     roundRect(ctx, 1, 1, fillWidth - 2, height - 2, 5)

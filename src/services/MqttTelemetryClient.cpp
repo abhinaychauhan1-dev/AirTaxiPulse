@@ -291,6 +291,118 @@ QVariantMap MqttTelemetryClient::decodePayload(const QByteArray &message)
         payload.insert(QStringLiteral("motorTemps"), motorTemps);
     }
 
+    QVariantList motorRpms;
+    const QJsonValue motorRpmsValue = object.value(QStringLiteral("motorRpms"));
+    const QJsonValue altMotorRpmsValue = object.value(QStringLiteral("motor_rpms"));
+    const QJsonArray motorRpmArray = motorRpmsValue.isArray() ? motorRpmsValue.toArray() : altMotorRpmsValue.toArray();
+    for (const QJsonValue &rpm : motorRpmArray) {
+        if (rpm.isDouble()) {
+            motorRpms.append(rpm.toDouble());
+        }
+    }
+    if (!motorRpms.isEmpty()) {
+        payload.insert(QStringLiteral("motorRpms"), motorRpms);
+    }
+
+    const QJsonValue tiltAngleValue = object.value(QStringLiteral("tiltAngle"));
+    if (tiltAngleValue.isDouble()) {
+        payload.insert(QStringLiteral("tiltAngle"), tiltAngleValue.toDouble());
+    } else {
+        const QJsonValue altTiltAngleValue = object.value(QStringLiteral("tilt_angle"));
+        if (altTiltAngleValue.isDouble()) {
+            payload.insert(QStringLiteral("tiltAngle"), altTiltAngleValue.toDouble());
+        }
+    }
+
+    QVariantList thrustOutputs;
+    const QJsonValue thrustOutputsValue = object.value(QStringLiteral("thrustOutputs"));
+    const QJsonValue altThrustOutputsValue = object.value(QStringLiteral("thrust_outputs"));
+    const QJsonArray thrustArray = thrustOutputsValue.isArray() ? thrustOutputsValue.toArray() : altThrustOutputsValue.toArray();
+    for (const QJsonValue &thrust : thrustArray) {
+        if (thrust.isDouble()) {
+            thrustOutputs.append(thrust.toDouble());
+        }
+    }
+    if (!thrustOutputs.isEmpty()) {
+        payload.insert(QStringLiteral("thrustOutputs"), thrustOutputs);
+    }
+
+    const QJsonValue inverterValue = object.value(QStringLiteral("inverter"));
+    if (inverterValue.isObject()) {
+        const QJsonObject inverterObject = inverterValue.toObject();
+
+        QVariantList inverterVoltages;
+        const QJsonValue voltagesValue = inverterObject.value(QStringLiteral("voltages"));
+        if (voltagesValue.isArray()) {
+            for (const QJsonValue &voltage : voltagesValue.toArray()) {
+                if (voltage.isDouble()) {
+                    inverterVoltages.append(voltage.toDouble());
+                }
+            }
+        }
+        if (!inverterVoltages.isEmpty()) {
+            payload.insert(QStringLiteral("inverterVoltages"), inverterVoltages);
+        }
+
+        QVariantList inverterCurrents;
+        const QJsonValue currentsValue = inverterObject.value(QStringLiteral("currents"));
+        if (currentsValue.isArray()) {
+            for (const QJsonValue &current : currentsValue.toArray()) {
+                if (current.isDouble()) {
+                    inverterCurrents.append(current.toDouble());
+                }
+            }
+        }
+        if (!inverterCurrents.isEmpty()) {
+            payload.insert(QStringLiteral("inverterCurrents"), inverterCurrents);
+        }
+
+        QVariantList inverterHealth;
+        const QJsonValue healthValue = inverterObject.value(QStringLiteral("health"));
+        if (healthValue.isArray()) {
+            for (const QJsonValue &health : healthValue.toArray()) {
+                if (health.isDouble()) {
+                    inverterHealth.append(health.toDouble());
+                }
+            }
+        }
+        if (!inverterHealth.isEmpty()) {
+            payload.insert(QStringLiteral("inverterHealth"), inverterHealth);
+        }
+    }
+
+    const auto readNumericArray = [&object](const QString &primaryKey, const QString &fallbackKey) {
+        QVariantList values;
+        const QJsonValue primaryValue = object.value(primaryKey);
+        const QJsonValue fallbackValue = object.value(fallbackKey);
+        const QJsonArray array = primaryValue.isArray() ? primaryValue.toArray() : fallbackValue.toArray();
+        for (const QJsonValue &entry : array) {
+            if (entry.isDouble()) {
+                values.append(entry.toDouble());
+            }
+        }
+        return values;
+    };
+
+    if (!payload.contains(QStringLiteral("inverterVoltages"))) {
+        const QVariantList inverterVoltages = readNumericArray(QStringLiteral("inverterVoltages"), QStringLiteral("inverter_voltages"));
+        if (!inverterVoltages.isEmpty()) {
+            payload.insert(QStringLiteral("inverterVoltages"), inverterVoltages);
+        }
+    }
+    if (!payload.contains(QStringLiteral("inverterCurrents"))) {
+        const QVariantList inverterCurrents = readNumericArray(QStringLiteral("inverterCurrents"), QStringLiteral("inverter_currents"));
+        if (!inverterCurrents.isEmpty()) {
+            payload.insert(QStringLiteral("inverterCurrents"), inverterCurrents);
+        }
+    }
+    if (!payload.contains(QStringLiteral("inverterHealth"))) {
+        const QVariantList inverterHealth = readNumericArray(QStringLiteral("inverterHealth"), QStringLiteral("inverter_health"));
+        if (!inverterHealth.isEmpty()) {
+            payload.insert(QStringLiteral("inverterHealth"), inverterHealth);
+        }
+    }
+
     const QJsonValue gpsValue = object.value(QStringLiteral("gps"));
     if (gpsValue.isObject()) {
         const QJsonObject gpsObject = gpsValue.toObject();

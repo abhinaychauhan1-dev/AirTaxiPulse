@@ -33,8 +33,11 @@ QML_SOURCES += \
     src/view/main.qml \
     src/view/features/FlightSimulationCard.qml \
     src/view/features/PrimaryFlightPage.qml \
+    src/view/features/PrimaryFlightInstrumentsPage.qml \
     src/view/features/PropulsionPage.qml \
+    src/view/features/DepPropulsionPage.qml \
     src/view/features/EnergyPage.qml \
+    src/view/features/EnergySystemsPage.qml \
     src/view/features/FcsPage.qml \
     src/view/features/SafetyPage.qml
 

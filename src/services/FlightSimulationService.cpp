@@ -28,6 +28,12 @@ FlightSimulationService::FlightSimulationService(QObject *parent)
     , m_flightModeLabel(QStringLiteral("Pad Hover Hold"))
     , m_batterySoc(92.0)
     , m_motorTemperatures({62.0, 63.5, 61.8, 64.2})
+    , m_motorRpmValues({420.0, 430.0, 418.0, 427.0})
+    , m_tiltAngleDeg(84.0)
+    , m_thrustOutputs({6.2, 6.0})
+    , m_inverterVoltages({728.0, 726.0, 729.0, 727.0})
+    , m_inverterCurrents({84.0, 82.5, 83.7, 82.9})
+    , m_inverterHealth({99.3, 99.1, 99.2, 99.0})
     , m_gpsLatitude(37.7749)
     , m_gpsLongitude(-122.4194)
     , m_telemetry()
@@ -56,6 +62,30 @@ FlightSimulationService::FlightSimulationService(QObject *parent)
     appendHistory(m_fpvHistory, initialPathError * 1.3 + qAbs(m_telemetry.pitch()) * 0.5 + 1.0);
     appendHistory(m_fpvHistory, initialPathError * 1.1 + qAbs(m_telemetry.pitch()) * 0.4 + 0.6);
     appendHistory(m_fpvHistory, initialPathError + qAbs(m_telemetry.pitch()) * 0.35);
+
+    const double initialRpmAverage = (m_motorRpmValues[0] + m_motorRpmValues[1] + m_motorRpmValues[2] + m_motorRpmValues[3]) / 4.0;
+    appendHistory(m_propulsionRpmHistory, initialRpmAverage * 0.94);
+    appendHistory(m_propulsionRpmHistory, initialRpmAverage * 0.97);
+    appendHistory(m_propulsionRpmHistory, initialRpmAverage);
+
+    appendHistory(m_propulsionTiltHistory, m_tiltAngleDeg + 2.5);
+    appendHistory(m_propulsionTiltHistory, m_tiltAngleDeg + 1.0);
+    appendHistory(m_propulsionTiltHistory, m_tiltAngleDeg);
+
+    const double initialMotorTempAverage = (m_motorTemperatures[0] + m_motorTemperatures[1] + m_motorTemperatures[2] + m_motorTemperatures[3]) / 4.0;
+    appendHistory(m_propulsionTempHistory, initialMotorTempAverage - 1.8);
+    appendHistory(m_propulsionTempHistory, initialMotorTempAverage - 0.7);
+    appendHistory(m_propulsionTempHistory, initialMotorTempAverage);
+
+    const double initialThrustTotal = m_thrustOutputs[0] + m_thrustOutputs[1];
+    appendHistory(m_propulsionThrustHistory, initialThrustTotal * 0.92);
+    appendHistory(m_propulsionThrustHistory, initialThrustTotal * 0.97);
+    appendHistory(m_propulsionThrustHistory, initialThrustTotal);
+
+    const double initialInverterHealthAverage = (m_inverterHealth[0] + m_inverterHealth[1] + m_inverterHealth[2] + m_inverterHealth[3]) / 4.0;
+    appendHistory(m_propulsionInverterHealthHistory, initialInverterHealthAverage);
+    appendHistory(m_propulsionInverterHealthHistory, initialInverterHealthAverage - 0.1);
+    appendHistory(m_propulsionInverterHealthHistory, initialInverterHealthAverage + 0.05);
 
     connect(&m_timer, &QTimer::timeout, this, &FlightSimulationService::updateSimulation);
     m_timer.start(500);
@@ -121,6 +151,12 @@ QString FlightSimulationService::vsValueText() const
 }
 double FlightSimulationService::batterySoc() const { return m_batterySoc; }
 QVariantList FlightSimulationService::motorTemperatures() const { return historyToVariantList(m_motorTemperatures); }
+QVariantList FlightSimulationService::motorRpmValues() const { return historyToVariantList(m_motorRpmValues); }
+double FlightSimulationService::tiltAngleDeg() const { return m_tiltAngleDeg; }
+QVariantList FlightSimulationService::thrustOutputs() const { return historyToVariantList(m_thrustOutputs); }
+QVariantList FlightSimulationService::inverterVoltages() const { return historyToVariantList(m_inverterVoltages); }
+QVariantList FlightSimulationService::inverterCurrents() const { return historyToVariantList(m_inverterCurrents); }
+QVariantList FlightSimulationService::inverterHealth() const { return historyToVariantList(m_inverterHealth); }
 double FlightSimulationService::gpsLatitude() const { return m_gpsLatitude; }
 double FlightSimulationService::gpsLongitude() const { return m_gpsLongitude; }
 
@@ -130,6 +166,11 @@ QVariantList FlightSimulationService::vsHistory() const { return historyToVarian
 QVariantList FlightSimulationService::attitudeHistory() const { return historyToVariantList(m_attitudeHistory); }
 QVariantList FlightSimulationService::headingHistory() const { return historyToVariantList(m_headingHistory); }
 QVariantList FlightSimulationService::fpvHistory() const { return historyToVariantList(m_fpvHistory); }
+QVariantList FlightSimulationService::propulsionRpmHistory() const { return historyToVariantList(m_propulsionRpmHistory); }
+QVariantList FlightSimulationService::propulsionTiltHistory() const { return historyToVariantList(m_propulsionTiltHistory); }
+QVariantList FlightSimulationService::propulsionTempHistory() const { return historyToVariantList(m_propulsionTempHistory); }
+QVariantList FlightSimulationService::propulsionThrustHistory() const { return historyToVariantList(m_propulsionThrustHistory); }
+QVariantList FlightSimulationService::propulsionInverterHealthHistory() const { return historyToVariantList(m_propulsionInverterHealthHistory); }
 
 double FlightSimulationService::clamp(double value, double minimumValue, double maximumValue)
 {
@@ -169,6 +210,13 @@ void FlightSimulationService::updateSimulation()
     double targetYaw = 0.0;
     double targetHeading = 0.0;
     double targetTrack = 0.0;
+    double targetRpmMean = 0.0;
+    double targetTiltAngleDeg = 0.0;
+    double targetThrustFront = 0.0;
+    double targetThrustRear = 0.0;
+    double targetInverterVoltage = 0.0;
+    double targetInverterCurrent = 0.0;
+    double targetInverterHealth = 0.0;
 
     if (cyclePosition < 8.0) {
         m_flightModeLabel = QStringLiteral("Pad Hover Hold");
@@ -182,6 +230,13 @@ void FlightSimulationService::updateSimulation()
         targetYaw = 2.0 * qSin(m_phase * 0.8);
         targetHeading = 132.0 + 0.8 * qSin(m_phase * 0.5);
         targetTrack = targetHeading + 0.6 * qSin(m_phase * 0.9);
+        targetRpmMean = 460.0 + 22.0 * qSin(m_phase * 1.1);
+        targetTiltAngleDeg = 84.0 + 1.8 * qSin(m_phase * 0.9);
+        targetThrustFront = 6.4 + 0.45 * qSin(m_phase * 1.0);
+        targetThrustRear = 6.1 + 0.4 * qCos(m_phase * 0.95);
+        targetInverterVoltage = 730.0 + 3.5 * qSin(m_phase * 0.6);
+        targetInverterCurrent = 86.0 + 4.5 * qSin(m_phase * 1.1);
+        targetInverterHealth = 99.2;
     } else if (cyclePosition < 16.0) {
         m_flightModeLabel = QStringLiteral("Lift-Off Climb");
         const double climbPhase = cyclePosition - 8.0;
@@ -195,6 +250,13 @@ void FlightSimulationService::updateSimulation()
         targetYaw = 3.5 * qSin(m_phase * 0.7);
         targetHeading = 132.0 + 1.8 * qSin(m_phase * 0.4);
         targetTrack = targetHeading + 1.0 * qSin(m_phase * 0.8);
+        targetRpmMean = 980.0 + 120.0 * qSin(m_phase * 0.9);
+        targetTiltAngleDeg = 72.0 - climbPhase * 4.0 + 2.0 * qSin(m_phase * 0.7);
+        targetThrustFront = 10.8 + 0.9 * qSin(m_phase * 0.8);
+        targetThrustRear = 10.4 + 0.8 * qCos(m_phase * 0.75);
+        targetInverterVoltage = 724.0 + 4.0 * qSin(m_phase * 0.55);
+        targetInverterCurrent = 164.0 + 15.0 * qSin(m_phase * 0.85);
+        targetInverterHealth = 98.9;
     } else if (cyclePosition < 24.0) {
         m_flightModeLabel = QStringLiteral("Transition to Cruise");
         const double transitionPhase = cyclePosition - 16.0;
@@ -208,6 +270,13 @@ void FlightSimulationService::updateSimulation()
         targetYaw = 5.0 * qSin(m_phase * 0.8);
         targetHeading = std::fmod(132.0 + transitionPhase * 1.9 + 360.0, 360.0);
         targetTrack = targetHeading + 2.0 * qSin(m_phase * 0.75) + 0.8 * qSin(m_phase * 1.4);
+        targetRpmMean = 1760.0 + transitionPhase * 70.0 + 140.0 * qSin(m_phase * 0.8);
+        targetTiltAngleDeg = 42.0 - transitionPhase * 4.8 + 2.4 * qSin(m_phase * 0.75);
+        targetThrustFront = 13.2 + 1.1 * qSin(m_phase * 0.75);
+        targetThrustRear = 12.9 + 1.0 * qCos(m_phase * 0.7);
+        targetInverterVoltage = 718.0 + 4.5 * qSin(m_phase * 0.45);
+        targetInverterCurrent = 214.0 + 16.0 * qSin(m_phase * 0.7);
+        targetInverterHealth = 98.5;
     } else if (cyclePosition < 33.0) {
         m_flightModeLabel = QStringLiteral("Cruise Corridor");
         targetCas = 128.0 + 8.0 * qSin(m_phase * 0.55) + 3.0 * qCos(m_phase * 1.3);
@@ -220,6 +289,13 @@ void FlightSimulationService::updateSimulation()
         targetYaw = 1.2 * qSin(m_phase * 0.45);
         targetHeading = std::fmod(148.0 + 4.0 * qSin(m_phase * 0.25) + 360.0, 360.0);
         targetTrack = targetHeading + 1.6 * qSin(m_phase * 0.85);
+        targetRpmMean = 2480.0 + 120.0 * qSin(m_phase * 0.55);
+        targetTiltAngleDeg = 4.0 + 1.4 * qSin(m_phase * 0.5);
+        targetThrustFront = 11.8 + 0.7 * qSin(m_phase * 0.7);
+        targetThrustRear = 11.6 + 0.6 * qCos(m_phase * 0.6);
+        targetInverterVoltage = 714.0 + 3.8 * qSin(m_phase * 0.35);
+        targetInverterCurrent = 182.0 + 10.0 * qSin(m_phase * 0.6);
+        targetInverterHealth = 98.4;
     } else {
         m_flightModeLabel = QStringLiteral("Arrival Descent");
         const double approachPhase = cyclePosition - 33.0;
@@ -233,6 +309,13 @@ void FlightSimulationService::updateSimulation()
         targetYaw = 4.5 * qSin(m_phase * 0.7);
         targetHeading = std::fmod(152.0 - approachPhase * 1.5 + 360.0, 360.0);
         targetTrack = targetHeading - 2.0 * qSin(m_phase * 0.7) - 0.6 * qCos(m_phase * 1.4);
+        targetRpmMean = 1860.0 - approachPhase * 58.0 + 90.0 * qSin(m_phase * 0.8);
+        targetTiltAngleDeg = 8.0 + approachPhase * 7.8 + 2.2 * qSin(m_phase * 0.75);
+        targetThrustFront = 9.7 - approachPhase * 0.28 + 0.8 * qSin(m_phase * 0.72);
+        targetThrustRear = 9.5 - approachPhase * 0.25 + 0.7 * qCos(m_phase * 0.68);
+        targetInverterVoltage = 719.0 + 3.5 * qSin(m_phase * 0.4);
+        targetInverterCurrent = 151.0 - approachPhase * 3.6 + 11.0 * qSin(m_phase * 0.8);
+        targetInverterHealth = 98.6;
     }
 
     auto approach = [](double current, double target, double maxStep) {
@@ -268,6 +351,30 @@ void FlightSimulationService::updateSimulation()
     m_telemetry.setHeading(newHeading);
     m_telemetry.setTrack(newTrack);
 
+    for (int i = 0; i < m_motorRpmValues.size(); ++i) {
+        const double rpmOffset = (i - 1.5) * 32.0;
+        const double rpmWave = 26.0 * qSin(m_phase * 0.74 + i * 0.37);
+        const double targetRpm = qMax(320.0, targetRpmMean + rpmOffset + rpmWave);
+        m_motorRpmValues[i] = approach(m_motorRpmValues[i], targetRpm, 130.0);
+    }
+
+    m_tiltAngleDeg = approach(m_tiltAngleDeg, clamp(targetTiltAngleDeg, 0.0, 90.0), 2.7);
+    m_thrustOutputs[0] = approach(m_thrustOutputs[0], qMax(0.0, targetThrustFront), 0.7);
+    m_thrustOutputs[1] = approach(m_thrustOutputs[1], qMax(0.0, targetThrustRear), 0.7);
+
+    for (int i = 0; i < m_inverterVoltages.size(); ++i) {
+        const double phaseOffset = i * 0.31;
+        const double voltageTarget = targetInverterVoltage + 2.2 * qSin(m_phase * 0.82 + phaseOffset);
+        m_inverterVoltages[i] = approach(m_inverterVoltages[i], voltageTarget, 3.5);
+
+        const double currentTarget = qMax(0.0, targetInverterCurrent + 6.5 * qSin(m_phase * 0.9 + phaseOffset));
+        m_inverterCurrents[i] = approach(m_inverterCurrents[i], currentTarget, 8.0);
+
+        const double healthDrift = 0.16 * qSin(m_phase * 0.25 + phaseOffset);
+        const double healthTarget = clamp(targetInverterHealth + healthDrift, 92.0, 100.0);
+        m_inverterHealth[i] = approach(m_inverterHealth[i], healthTarget, 0.2);
+    }
+
     m_batterySoc = clamp(m_batterySoc - 0.015, 18.0, 100.0);
     const double thermalWave = 2.6 * qSin(m_phase * 0.52);
     for (int i = 0; i < m_motorTemperatures.size(); ++i) {
@@ -285,6 +392,15 @@ void FlightSimulationService::updateSimulation()
     appendHistory(m_headingHistory, m_telemetry.heading());
     const double pathError = wrappedAngleDeltaDegrees(m_telemetry.track(), m_telemetry.heading());
     appendHistory(m_fpvHistory, pathError * 1.2 + qAbs(m_telemetry.pitch()) * 0.35);
+
+    const double rpmAverage = (m_motorRpmValues[0] + m_motorRpmValues[1] + m_motorRpmValues[2] + m_motorRpmValues[3]) / 4.0;
+    appendHistory(m_propulsionRpmHistory, rpmAverage);
+    appendHistory(m_propulsionTiltHistory, m_tiltAngleDeg);
+    const double tempAverage = (m_motorTemperatures[0] + m_motorTemperatures[1] + m_motorTemperatures[2] + m_motorTemperatures[3]) / 4.0;
+    appendHistory(m_propulsionTempHistory, tempAverage);
+    appendHistory(m_propulsionThrustHistory, m_thrustOutputs[0] + m_thrustOutputs[1]);
+    const double inverterHealthAverage = (m_inverterHealth[0] + m_inverterHealth[1] + m_inverterHealth[2] + m_inverterHealth[3]) / 4.0;
+    appendHistory(m_propulsionInverterHealthHistory, inverterHealthAverage);
 
     emit telemetryChanged();
 }

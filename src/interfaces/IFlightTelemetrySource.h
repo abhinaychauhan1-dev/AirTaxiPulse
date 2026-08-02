@@ -32,6 +32,12 @@ public:
     virtual QString vsValueText() const = 0;
     virtual double batterySoc() const = 0;
     virtual QVariantList motorTemperatures() const = 0;
+    virtual QVariantList motorRpmValues() const = 0;
+    virtual double tiltAngleDeg() const = 0;
+    virtual QVariantList thrustOutputs() const = 0;
+    virtual QVariantList inverterVoltages() const = 0;
+    virtual QVariantList inverterCurrents() const = 0;
+    virtual QVariantList inverterHealth() const = 0;
     virtual double gpsLatitude() const = 0;
     virtual double gpsLongitude() const = 0;
     virtual QVariantList casHistory() const = 0;
@@ -40,6 +46,11 @@ public:
     virtual QVariantList attitudeHistory() const = 0;
     virtual QVariantList headingHistory() const = 0;
     virtual QVariantList fpvHistory() const = 0;
+    virtual QVariantList propulsionRpmHistory() const = 0;
+    virtual QVariantList propulsionTiltHistory() const = 0;
+    virtual QVariantList propulsionTempHistory() const = 0;
+    virtual QVariantList propulsionThrustHistory() const = 0;
+    virtual QVariantList propulsionInverterHealthHistory() const = 0;
 };
 
 #endif // IFLIGHTTELEMETRYSOURCE_H

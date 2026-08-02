@@ -188,7 +188,7 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignVCenter
                     spacing: 1
                     Label {
-                        text: qsTr("LIVE OPERATIONS")
+                        text: qsTr("AIR TAXI OPERATIONS")
                         color: "#78b6dd"
                         font.pixelSize: 9
                         font.bold: true
@@ -624,14 +624,14 @@ ApplicationWindow {
                     Layout.fillHeight: true
                     currentIndex: window.currentIndex
 
-                    PrimaryFlightPage {
+                    PrimaryFlightInstrumentsPage {
                         flightModel: airTaxiModules.primaryFlight
                         missionTimeText: window.currentTimeText
                         missionDateText: window.currentDateText
                         missionEtaText: window.elapsedText
                     }
-                    PropulsionPage { moduleRegistry: airTaxiModules }
-                    EnergyPage { moduleRegistry: airTaxiModules }
+                    DepPropulsionPage { moduleRegistry: airTaxiModules }
+                    EnergySystemsPage { moduleRegistry: airTaxiModules }
                     FcsPage { moduleRegistry: airTaxiModules }
                     SafetyPage { moduleRegistry: airTaxiModules }
                 }

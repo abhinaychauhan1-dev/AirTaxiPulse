@@ -4,7 +4,7 @@ Air Taxi eVTOL Pulse is a Qt Quick operations dashboard that simulates live eVTO
 
 ## Executive Summary (Demo-Friendly)
 
-This app visualizes an air taxi mission lifecycle in real time:
+This app visualizes an Air Taxi mission lifecycle in real time:
 
 - Lift-off and climb behavior
 - Cruise speed and altitude window

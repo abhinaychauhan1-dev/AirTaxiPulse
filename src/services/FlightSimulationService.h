@@ -27,6 +27,12 @@ class FlightSimulationService : public QObject, public IFlightTelemetrySource
     Q_PROPERTY(QString vsValueText READ vsValueText NOTIFY telemetryChanged)
     Q_PROPERTY(double batterySoc READ batterySoc NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList motorTemperatures READ motorTemperatures NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList motorRpmValues READ motorRpmValues NOTIFY telemetryChanged)
+    Q_PROPERTY(double tiltAngleDeg READ tiltAngleDeg NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList thrustOutputs READ thrustOutputs NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList inverterVoltages READ inverterVoltages NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList inverterCurrents READ inverterCurrents NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList inverterHealth READ inverterHealth NOTIFY telemetryChanged)
     Q_PROPERTY(double gpsLatitude READ gpsLatitude NOTIFY telemetryChanged)
     Q_PROPERTY(double gpsLongitude READ gpsLongitude NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList casHistory READ casHistory NOTIFY telemetryChanged)
@@ -35,6 +41,11 @@ class FlightSimulationService : public QObject, public IFlightTelemetrySource
     Q_PROPERTY(QVariantList attitudeHistory READ attitudeHistory NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList headingHistory READ headingHistory NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList fpvHistory READ fpvHistory NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList propulsionRpmHistory READ propulsionRpmHistory NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList propulsionTiltHistory READ propulsionTiltHistory NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList propulsionTempHistory READ propulsionTempHistory NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList propulsionThrustHistory READ propulsionThrustHistory NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList propulsionInverterHealthHistory READ propulsionInverterHealthHistory NOTIFY telemetryChanged)
 
 public:
     explicit FlightSimulationService(QObject *parent = nullptr);
@@ -64,6 +75,12 @@ public:
     QString vsValueText() const;
     double batterySoc() const;
     QVariantList motorTemperatures() const;
+    QVariantList motorRpmValues() const override;
+    double tiltAngleDeg() const override;
+    QVariantList thrustOutputs() const override;
+    QVariantList inverterVoltages() const override;
+    QVariantList inverterCurrents() const override;
+    QVariantList inverterHealth() const override;
     double gpsLatitude() const;
     double gpsLongitude() const;
     QVariantList casHistory() const;
@@ -72,6 +89,11 @@ public:
     QVariantList attitudeHistory() const;
     QVariantList headingHistory() const;
     QVariantList fpvHistory() const;
+    QVariantList propulsionRpmHistory() const override;
+    QVariantList propulsionTiltHistory() const override;
+    QVariantList propulsionTempHistory() const override;
+    QVariantList propulsionThrustHistory() const override;
+    QVariantList propulsionInverterHealthHistory() const override;
 
 signals:
     void telemetryChanged();
@@ -88,6 +110,12 @@ private:
     QString m_flightModeLabel;
     double m_batterySoc;
     QVector<double> m_motorTemperatures;
+    QVector<double> m_motorRpmValues;
+    double m_tiltAngleDeg;
+    QVector<double> m_thrustOutputs;
+    QVector<double> m_inverterVoltages;
+    QVector<double> m_inverterCurrents;
+    QVector<double> m_inverterHealth;
     double m_gpsLatitude;
     double m_gpsLongitude;
     FlightTelemetryData m_telemetry;
@@ -97,6 +125,11 @@ private:
     QVector<double> m_attitudeHistory;
     QVector<double> m_headingHistory;
     QVector<double> m_fpvHistory;
+    QVector<double> m_propulsionRpmHistory;
+    QVector<double> m_propulsionTiltHistory;
+    QVector<double> m_propulsionTempHistory;
+    QVector<double> m_propulsionThrustHistory;
+    QVector<double> m_propulsionInverterHealthHistory;
     QTimer m_timer;
 };
 

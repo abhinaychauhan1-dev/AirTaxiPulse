@@ -17,6 +17,12 @@ MqttFlightTelemetryService::MqttFlightTelemetryService(QObject *parent)
     , m_flightModeLabel(QStringLiteral("MQTT Standby"))
     , m_batterySoc(100.0)
     , m_motorTemperatures({0.0, 0.0, 0.0, 0.0})
+    , m_motorRpmValues({0.0, 0.0, 0.0, 0.0})
+    , m_tiltAngleDeg(0.0)
+    , m_thrustOutputs({0.0, 0.0})
+    , m_inverterVoltages({0.0, 0.0, 0.0, 0.0})
+    , m_inverterCurrents({0.0, 0.0, 0.0, 0.0})
+    , m_inverterHealth({0.0, 0.0, 0.0, 0.0})
     , m_gpsLatitude(0.0)
     , m_gpsLongitude(0.0)
 {
@@ -40,6 +46,11 @@ MqttFlightTelemetryService::MqttFlightTelemetryService(QObject *parent)
     appendHistory(m_attitudeHistory, qAbs(m_telemetry.pitch()) + qAbs(m_telemetry.roll()));
     appendHistory(m_headingHistory, m_telemetry.heading());
     appendHistory(m_fpvHistory, wrappedAngleDeltaDegrees(m_telemetry.track(), m_telemetry.heading()));
+    appendHistory(m_propulsionRpmHistory, 0.0);
+    appendHistory(m_propulsionTiltHistory, 0.0);
+    appendHistory(m_propulsionTempHistory, 0.0);
+    appendHistory(m_propulsionThrustHistory, 0.0);
+    appendHistory(m_propulsionInverterHealthHistory, 0.0);
 }
 
 FlightTelemetryData *MqttFlightTelemetryService::telemetry() const
@@ -261,6 +272,42 @@ QVariantList MqttFlightTelemetryService::motorTemperatures() const
     return historyToVariantList(m_motorTemperatures);
 }
 
+QVariantList MqttFlightTelemetryService::motorRpmValues() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_motorRpmValues);
+}
+
+double MqttFlightTelemetryService::tiltAngleDeg() const
+{
+    QReadLocker lock(&m_stateLock);
+    return m_tiltAngleDeg;
+}
+
+QVariantList MqttFlightTelemetryService::thrustOutputs() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_thrustOutputs);
+}
+
+QVariantList MqttFlightTelemetryService::inverterVoltages() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_inverterVoltages);
+}
+
+QVariantList MqttFlightTelemetryService::inverterCurrents() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_inverterCurrents);
+}
+
+QVariantList MqttFlightTelemetryService::inverterHealth() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_inverterHealth);
+}
+
 double MqttFlightTelemetryService::gpsLatitude() const
 {
     QReadLocker lock(&m_stateLock);
@@ -309,6 +356,36 @@ QVariantList MqttFlightTelemetryService::fpvHistory() const
     return historyToVariantList(m_fpvHistory);
 }
 
+QVariantList MqttFlightTelemetryService::propulsionRpmHistory() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_propulsionRpmHistory);
+}
+
+QVariantList MqttFlightTelemetryService::propulsionTiltHistory() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_propulsionTiltHistory);
+}
+
+QVariantList MqttFlightTelemetryService::propulsionTempHistory() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_propulsionTempHistory);
+}
+
+QVariantList MqttFlightTelemetryService::propulsionThrustHistory() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_propulsionThrustHistory);
+}
+
+QVariantList MqttFlightTelemetryService::propulsionInverterHealthHistory() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_propulsionInverterHealthHistory);
+}
+
 void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
 {
     QWriteLocker lock(&m_stateLock);
@@ -344,6 +421,49 @@ void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
             m_motorTemperatures.append(value.toDouble());
         }
     }
+    if (payload.contains(QStringLiteral("motorRpms"))) {
+        const QVariantList motorRpms = payload.value(QStringLiteral("motorRpms")).toList();
+        m_motorRpmValues.clear();
+        m_motorRpmValues.reserve(motorRpms.size());
+        for (const QVariant &value : motorRpms) {
+            m_motorRpmValues.append(value.toDouble());
+        }
+    }
+    if (payload.contains(QStringLiteral("tiltAngle"))) {
+        m_tiltAngleDeg = clamp(payload.value(QStringLiteral("tiltAngle")).toDouble(), 0.0, 90.0);
+    }
+    if (payload.contains(QStringLiteral("thrustOutputs"))) {
+        const QVariantList thrustOutputs = payload.value(QStringLiteral("thrustOutputs")).toList();
+        m_thrustOutputs.clear();
+        m_thrustOutputs.reserve(thrustOutputs.size());
+        for (const QVariant &value : thrustOutputs) {
+            m_thrustOutputs.append(value.toDouble());
+        }
+    }
+    if (payload.contains(QStringLiteral("inverterVoltages"))) {
+        const QVariantList inverterVoltages = payload.value(QStringLiteral("inverterVoltages")).toList();
+        m_inverterVoltages.clear();
+        m_inverterVoltages.reserve(inverterVoltages.size());
+        for (const QVariant &value : inverterVoltages) {
+            m_inverterVoltages.append(value.toDouble());
+        }
+    }
+    if (payload.contains(QStringLiteral("inverterCurrents"))) {
+        const QVariantList inverterCurrents = payload.value(QStringLiteral("inverterCurrents")).toList();
+        m_inverterCurrents.clear();
+        m_inverterCurrents.reserve(inverterCurrents.size());
+        for (const QVariant &value : inverterCurrents) {
+            m_inverterCurrents.append(value.toDouble());
+        }
+    }
+    if (payload.contains(QStringLiteral("inverterHealth"))) {
+        const QVariantList inverterHealth = payload.value(QStringLiteral("inverterHealth")).toList();
+        m_inverterHealth.clear();
+        m_inverterHealth.reserve(inverterHealth.size());
+        for (const QVariant &value : inverterHealth) {
+            m_inverterHealth.append(clamp(value.toDouble(), 0.0, 100.0));
+        }
+    }
 
     appendHistory(m_casHistory, m_telemetry.cas());
     appendHistory(m_altHistory, m_telemetry.altBaro());
@@ -351,6 +471,36 @@ void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
     appendHistory(m_attitudeHistory, qAbs(m_telemetry.pitch()) + qAbs(m_telemetry.roll()));
     appendHistory(m_headingHistory, m_telemetry.heading());
     appendHistory(m_fpvHistory, wrappedAngleDeltaDegrees(m_telemetry.track(), m_telemetry.heading()));
+
+    if (!m_motorRpmValues.isEmpty()) {
+        double rpmTotal = 0.0;
+        for (double rpm : m_motorRpmValues) {
+            rpmTotal += rpm;
+        }
+        appendHistory(m_propulsionRpmHistory, rpmTotal / m_motorRpmValues.size());
+    }
+    appendHistory(m_propulsionTiltHistory, m_tiltAngleDeg);
+    if (!m_motorTemperatures.isEmpty()) {
+        double tempTotal = 0.0;
+        for (double temperature : m_motorTemperatures) {
+            tempTotal += temperature;
+        }
+        appendHistory(m_propulsionTempHistory, tempTotal / m_motorTemperatures.size());
+    }
+    if (!m_thrustOutputs.isEmpty()) {
+        double thrustTotal = 0.0;
+        for (double thrust : m_thrustOutputs) {
+            thrustTotal += thrust;
+        }
+        appendHistory(m_propulsionThrustHistory, thrustTotal);
+    }
+    if (!m_inverterHealth.isEmpty()) {
+        double healthTotal = 0.0;
+        for (double health : m_inverterHealth) {
+            healthTotal += health;
+        }
+        appendHistory(m_propulsionInverterHealthHistory, healthTotal / m_inverterHealth.size());
+    }
 
     lock.unlock();
     emit telemetryChanged();

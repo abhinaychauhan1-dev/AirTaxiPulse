@@ -145,7 +145,7 @@ Item {
 
             FlightSimulationCard {
                 cardTitle: "Trip Speed"
-                cardSubtitle: "Lift-off and cruise speed during your air taxi ride"
+                cardSubtitle: "Lift-off and cruise speed during your Air Taxi ride"
                 iconType: "speed"
                 accentColor: "#72b8e6"
                 motionSeed: 0.15
@@ -201,7 +201,7 @@ Item {
 
             FlightSimulationCard {
                 cardTitle: "Climb and Descent"
-                cardSubtitle: "How fast the air taxi is rising or lowering"
+                cardSubtitle: "How fast the Air Taxi is rising or lowering"
                 iconType: "vertical"
                 accentColor: flightModel.vsAccentColor
                 motionSeed: 2.05
@@ -345,7 +345,7 @@ Item {
                         spacing: 6
                         Rectangle { anchors.horizontalCenter: parent.horizontalCenter; width: 100; height: 4; color: "#ff8f70"; radius: 2 }
                         Text {
-                            text: "Guidance marker showing route-following quality for this air taxi leg."
+                            text: "Guidance marker showing route-following quality for this Air Taxi leg."
                             color: "#ffc9b9"
                             font.pixelSize: 10
                             wrapMode: Text.WordWrap
