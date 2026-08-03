@@ -9,138 +9,33 @@ Item {
     required property var moduleRegistry
 
     readonly property var flightModel: root.moduleRegistry.primaryFlight
-    property bool autopilotEngaged: true
-    property int guidanceMode: 0
-    property int commandedFlightMode: -1
-    property bool automaticRouteSequence: true
-    property int selectedWaypoint: 1
+    readonly property var fcs: root.moduleRegistry.flightControlSystem
     property int hoveredWaypoint: -1
     property real animationPhase: 0.0
-    property real manualLeftElevon: 0.0
-    property real manualRightElevon: 0.0
-    property real manualRuddervator: 0.0
-    property real manualTiltActuator: 45.0
-    property var waypoints: [
-        { code: "PAD A", name: "Downtown Vertiport", latitude: 37.7749, longitude: -122.4194 },
-        { code: "TRN-1", name: "Transition Gate", latitude: 37.7792, longitude: -122.4124 },
-        { code: "CRZ-2", name: "Bay Corridor", latitude: 37.7868, longitude: -122.4012 },
-        { code: "APP-1", name: "Approach Fix", latitude: 37.7935, longitude: -122.3928 },
-        { code: "PAD B", name: "Harbor Vertiport", latitude: 37.7978, longitude: -122.3860 }
-    ]
-
-    readonly property string flightMode: {
-        var sourceMode = String(root.flightModel.flightModeLabel)
-        if (sourceMode.indexOf("Hover") >= 0 || sourceMode.indexOf("Lift-Off") >= 0)
-            return "HOVER"
-        if (sourceMode.indexOf("Transition") >= 0)
-            return "TRANSITION"
-        if (sourceMode.indexOf("Cruise") >= 0)
-            return "CRUISE"
-        return "VERTICAL LANDING"
-    }
-    readonly property int telemetryFlightModeIndex: root.flightMode === "HOVER" ? 0
-                                                    : (root.flightMode === "TRANSITION" ? 1
-                                                    : (root.flightMode === "CRUISE" ? 2 : 3))
-    readonly property int flightModeIndex: root.commandedFlightMode >= 0
-                                           ? root.commandedFlightMode : root.telemetryFlightModeIndex
-    readonly property real telemetryLeftElevon: root.clamp(Number(root.flightModel.pitch) * 0.55
-                                                           - Number(root.flightModel.roll) * 0.75, -18, 18)
-    readonly property real telemetryRightElevon: root.clamp(Number(root.flightModel.pitch) * 0.55
-                                                            + Number(root.flightModel.roll) * 0.75, -18, 18)
-    readonly property real telemetryRuddervator: root.clamp(Number(root.flightModel.yaw) * 0.8, -20, 20)
-    readonly property real telemetryTiltActuator: Number(root.flightModel.tiltAngleDeg)
-    readonly property real leftElevon: root.autopilotEngaged ? root.telemetryLeftElevon : root.manualLeftElevon
-    readonly property real rightElevon: root.autopilotEngaged ? root.telemetryRightElevon : root.manualRightElevon
-    readonly property real ruddervator: root.autopilotEngaged ? root.telemetryRuddervator : root.manualRuddervator
-    readonly property real tiltActuator: root.autopilotEngaged ? root.telemetryTiltActuator : root.manualTiltActuator
-    readonly property int automaticWaypoint: Math.min(root.waypoints.length - 1, root.flightModeIndex + 1)
-    readonly property int navigationWaypoint: root.automaticRouteSequence
-                                              ? root.automaticWaypoint : root.selectedWaypoint
+    readonly property bool autopilotEngaged: root.fcs.autopilotEngaged
+    readonly property int guidanceMode: root.fcs.guidanceMode
+    readonly property int commandedFlightMode: root.fcs.commandedFlightMode
+    readonly property int flightModeIndex: root.fcs.flightModeIndex
+    readonly property bool automaticRouteSequence: root.fcs.automaticRouteSequence
+    readonly property int navigationWaypoint: root.fcs.navigationWaypoint
+    readonly property real nextWaypointDistance: root.fcs.nextWaypointDistance
+    readonly property string routeLegStatus: root.fcs.routeLegStatus
+    readonly property var waypoints: root.fcs.waypoints
     readonly property int activeWaypoint: root.hoveredWaypoint >= 0
-                                          ? root.hoveredWaypoint : root.navigationWaypoint
-    readonly property real nextWaypointDistance: root.distanceToWaypoint(root.navigationWaypoint)
-    readonly property string routeLegStatus: root.automaticRouteSequence
-                                              ? "AUTO SEQUENCE" : "DIRECT TO"
+                                          ? root.hoveredWaypoint : root.fcs.navigationWaypoint
 
-    function clamp(value, minimum, maximum) {
-        return Math.max(minimum, Math.min(maximum, value))
-    }
-
-    function modeName(index) {
-        return ["HOVER", "TRANSITION", "CRUISE", "VERTICAL LANDING"][index]
-    }
-
-    function guidanceName(index) {
-        return ["ROUTE", "HEADING", "ATTITUDE"][index]
-    }
-
-    function actuatorName(index) {
-        return ["LEFT ELEVON", "RIGHT ELEVON", "RUDDERVATOR", "TILT ACTUATOR"][index]
-    }
-
-    function actuatorValue(index) {
-        return [root.leftElevon, root.rightElevon, root.ruddervator, root.tiltActuator][index]
-    }
-
-    function actuatorMinimum(index) {
-        return index === 3 ? 0 : (index === 2 ? -20 : -18)
-    }
-
-    function actuatorMaximum(index) {
-        return index === 3 ? 90 : (index === 2 ? 20 : 18)
-    }
-
-    function toggleAutopilot() {
-        if (root.autopilotEngaged) {
-            root.manualLeftElevon = root.telemetryLeftElevon
-            root.manualRightElevon = root.telemetryRightElevon
-            root.manualRuddervator = root.telemetryRuddervator
-            root.manualTiltActuator = root.telemetryTiltActuator
-        }
-        root.autopilotEngaged = !root.autopilotEngaged
-    }
-
-    function setManualActuator(index, value) {
-        var boundedValue = root.clamp(value, root.actuatorMinimum(index), root.actuatorMaximum(index))
-        if (index === 0)
-            root.manualLeftElevon = boundedValue
-        else if (index === 1)
-            root.manualRightElevon = boundedValue
-        else if (index === 2)
-            root.manualRuddervator = boundedValue
-        else
-            root.manualTiltActuator = boundedValue
-    }
-
+    function modeName(index) { return root.fcs.modeName(index) }
+    function guidanceName(index) { return root.fcs.guidanceName(index) }
+    function actuatorName(index) { return root.fcs.actuatorName(index) }
+    function actuatorValue(index) { return root.fcs.actuatorValues[index] }
+    function actuatorMinimum(index) { return root.fcs.actuatorMinimum(index) }
+    function actuatorMaximum(index) { return root.fcs.actuatorMaximum(index) }
+    function toggleAutopilot() { root.fcs.toggleAutopilot() }
+    function setManualActuator(index, value) { root.fcs.setManualActuator(index, value) }
+    function resumeAutomaticRoute() { root.fcs.resumeAutomaticRoute() }
     function selectDirectTo(index) {
-        root.selectedWaypoint = index
-        root.automaticRouteSequence = false
-        root.guidanceMode = 0
+        root.fcs.selectDirectTo(index)
         root.hoveredWaypoint = -1
-        routeCanvas.requestPaint()
-    }
-
-    function resumeAutomaticRoute() {
-        root.automaticRouteSequence = true
-        root.selectedWaypoint = root.automaticWaypoint
-        root.guidanceMode = 0
-        routeCanvas.requestPaint()
-    }
-
-    function distanceToWaypoint(index) {
-        var waypoint = root.waypoints[index]
-        var latitude = Number(root.flightModel.gpsLatitude)
-        var longitude = Number(root.flightModel.gpsLongitude)
-        if (!waypoint || !isFinite(latitude) || !isFinite(longitude))
-            return 0
-        var radians = Math.PI / 180
-        var latitudeDelta = (waypoint.latitude - latitude) * radians
-        var longitudeDelta = (waypoint.longitude - longitude) * radians
-        var a = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
-                + Math.cos(latitude * radians) * Math.cos(waypoint.latitude * radians)
-                * Math.sin(longitudeDelta / 2) * Math.sin(longitudeDelta / 2)
-        a = root.clamp(a, 0, 1)
-        return 3440.065 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
     }
 
     Timer {
@@ -200,7 +95,7 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.commandedFlightMode = -1
+                        onClicked: root.fcs.clearCommandedFlightMode()
                     }
                 }
 
@@ -288,7 +183,7 @@ Item {
                         MouseArea {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.commandedFlightMode = modeStep.index
+                            onClicked: root.fcs.setCommandedFlightMode(modeStep.index)
                         }
                     }
                 }
@@ -371,7 +266,7 @@ Item {
                                 MouseArea {
                                     anchors.fill: parent
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.guidanceMode = guidanceButton.index
+                                    onClicked: root.fcs.setGuidanceMode(guidanceButton.index)
                                 }
                             }
                         }

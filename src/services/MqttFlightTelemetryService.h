@@ -84,6 +84,10 @@ public:
     int maxPendingMessages() const;
     void setMaxPendingMessages(int maxPendingMessages);
 
+    Q_INVOKABLE void decreaseParserConcurrency();
+    Q_INVOKABLE void increaseParserConcurrency();
+    Q_INVOKABLE void increasePendingCapacity();
+
     quint64 droppedMessageCount() const;
 
     bool connected() const;

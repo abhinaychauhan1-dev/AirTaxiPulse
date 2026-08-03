@@ -9,6 +9,7 @@ Item {
     required property var moduleRegistry
 
     readonly property var flightModel: root.moduleRegistry.primaryFlight
+    readonly property var propulsionModel: root.moduleRegistry.propulsionSystem
     readonly property var rpmValues: root.flightModel.motorRpmValues || []
     readonly property var tempValues: root.flightModel.motorTemperatures || []
     readonly property var thrustValues: root.flightModel.thrustOutputs || []
@@ -28,34 +29,16 @@ Item {
     property real rotorPhase: 0.0
     property real powerFlowPhase: 0.0
 
-    readonly property real averageRpm: average(root.rpmValues)
-    readonly property real averageMotorTemp: average(root.tempValues)
-    readonly property real inverterHealthAverage: average(root.inverterHealthValues)
-    readonly property real frontThrust: Number(root.thrustValues[0] || 0)
-    readonly property real rearThrust: Number(root.thrustValues[1] || 0)
-    readonly property real combinedThrust: root.frontThrust + root.rearThrust
-    readonly property real thrustBalance: root.combinedThrust > 0
-        ? (root.frontThrust - root.rearThrust) / root.combinedThrust
-        : 0
-    readonly property real electricalPowerKw: {
-        var total = 0
-        for (var i = 0; i < Math.min(root.inverterVoltageValues.length, root.inverterCurrentValues.length); ++i)
-            total += Number(root.inverterVoltageValues[i]) * Number(root.inverterCurrentValues[i]) / 1000.0
-        return total
-    }
-    readonly property string propulsionState: root.averageMotorTemp >= 85
-        ? "THERMAL LIMIT"
-        : (root.inverterHealthAverage < 90 ? "DEGRADED" : "ALL CHANNELS NOMINAL")
+    readonly property real averageRpm: root.propulsionModel.averageRpm
+    readonly property real averageMotorTemp: root.propulsionModel.averageMotorTemperature
+    readonly property real inverterHealthAverage: root.propulsionModel.inverterHealthAverage
+    readonly property real frontThrust: root.propulsionModel.frontThrust
+    readonly property real rearThrust: root.propulsionModel.rearThrust
+    readonly property real combinedThrust: root.propulsionModel.combinedThrust
+    readonly property real thrustBalance: root.propulsionModel.thrustBalance
+    readonly property real electricalPowerKw: root.propulsionModel.electricalPowerKw
+    readonly property string propulsionState: root.propulsionModel.stateLabel
     readonly property color stateColor: root.propulsionState === "ALL CHANNELS NOMINAL" ? "#69d6a0" : "#ff9f72"
-
-    function average(values) {
-        if (!values || values.length === 0)
-            return 0
-        var total = 0
-        for (var i = 0; i < values.length; ++i)
-            total += Number(values[i])
-        return total / values.length
-    }
 
     Timer {
         interval: 32
@@ -476,8 +459,8 @@ Item {
                         Label { text: "BALANCE"; color: "#78949d"; font.pixelSize: 8 }
                         Item { Layout.fillWidth: true }
                         Label {
-                            text: Math.abs(root.thrustBalance) < 0.03 ? "CENTERED" : (root.thrustBalance > 0 ? "FRONT BIAS" : "REAR BIAS")
-                            color: Math.abs(root.thrustBalance) < 0.03 ? "#69d6a0" : "#f2bc6b"
+                            text: root.propulsionModel.thrustBalanceLabel
+                            color: root.propulsionModel.thrustBalanced ? "#69d6a0" : "#f2bc6b"
                             font.pixelSize: 9
                             font.bold: true
                         }

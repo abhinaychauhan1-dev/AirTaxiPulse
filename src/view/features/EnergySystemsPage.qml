@@ -9,8 +9,8 @@ Item {
     required property var moduleRegistry
 
     readonly property var energyModel: root.moduleRegistry.primaryFlight
-    readonly property bool hoverMode: root.energyModel.flightModeLabel.indexOf("Hover") >= 0
-                                 || root.energyModel.flightModeLabel.indexOf("Lift-Off") >= 0
+    readonly property var energySystem: root.moduleRegistry.energySystem
+    readonly property bool hoverMode: root.energySystem.hoverMode
     readonly property real soc: Number(root.energyModel.batterySoc)
     readonly property real soh: Number(root.energyModel.batterySoh)
     readonly property real powerKw: Number(root.energyModel.powerConsumptionKw)
@@ -20,8 +20,8 @@ Item {
     readonly property real busVoltage: Number(root.energyModel.busVoltage)
     readonly property real busCurrent: Number(root.energyModel.busCurrent)
     readonly property bool thermalWarning: root.energyModel.thermalRunawayWarning
-    readonly property real estimatedMinutes: root.powerKw > 1 ? root.soc * 4.2 / root.powerKw * 60.0 : 0
-    readonly property color statusColor: root.thermalWarning ? "#ff665c" : (root.soc < 25 ? "#ffb05f" : "#65d69b")
+    readonly property real estimatedMinutes: root.energySystem.estimatedMinutes
+    readonly property color statusColor: root.energySystem.status === 2 ? "#ff665c" : (root.energySystem.status === 1 ? "#ffb05f" : "#65d69b")
     readonly property int panelSpacing: 6
     readonly property real topHeight: Math.max(210, (dashboard.height - root.panelSpacing) * 0.55)
     readonly property real bottomHeight: Math.max(170, dashboard.height - root.panelSpacing - root.topHeight)
@@ -36,28 +36,23 @@ Item {
                                             ? root.hoveredBusChannel : root.selectedBusChannel
 
     function zoneTemperature(index) {
-        return index < root.cellTemperatures.length
-            ? Number(root.cellTemperatures[index]) : 0
+        return root.energySystem.zoneTemperatures[index]
     }
 
     function busChannelName(index) {
-        return ["LIFT A", "LIFT B", "AVIONICS", "THERMAL", "RESERVE"][index]
+        return root.energySystem.busChannelName(index)
     }
 
     function busChannelCode(index) {
-        return ["LA", "LB", "AV", "TH", "RS"][index]
-    }
-
-    function busChannelShare(index) {
-        return [0.28, 0.28, 0.12, 0.20, 0.12][index]
+        return root.energySystem.busChannelCode(index)
     }
 
     function busChannelCurrent(index) {
-        return root.busCurrent * root.busChannelShare(index)
+        return root.energySystem.busChannelCurrents[index]
     }
 
     function busChannelPower(index) {
-        return root.busVoltage * root.busChannelCurrent(index) / 1000.0
+        return root.energySystem.busChannelPowers[index]
     }
 
     Timer {
@@ -98,7 +93,7 @@ Item {
                     Rectangle { width: 7; height: 7; radius: 4; color: root.statusColor }
                     Label {
                         width: 154
-                        text: root.thermalWarning ? "THERMAL WARNING" : (root.soc < 25 ? "LOW RESERVE" : "BATTERY NOMINAL")
+                        text: root.energySystem.statusLabel
                         color: root.statusColor
                         font.pixelSize: 9
                         minimumPixelSize: 7
@@ -140,7 +135,7 @@ Item {
 
                 Item { Layout.fillWidth: true }
                 Label {
-                    text: root.hoverMode ? "HOVER POWER PROFILE" : "CRUISE POWER PROFILE"
+                    text: root.energySystem.powerProfileLabel
                     color: root.hoverMode ? "#ffbd70" : "#74d1e6"
                     font.pixelSize: 8
                     font.bold: true
@@ -541,7 +536,7 @@ Item {
                             Label { text: "FLIGHT PHASE"; color: "#718c98"; font.pixelSize: 7 }
                             Text { Layout.fillWidth: true; text: root.energyModel.flightModeLabel; color: "#d9edf5"; font.pixelSize: 10; font.bold: true; wrapMode: Text.WordWrap }
                             Label { text: "EFFICIENCY"; color: "#718c98"; font.pixelSize: 7 }
-                            Text { text: Math.max(72, 96 - root.powerKw / 40).toFixed(1) + "%"; color: "#79d6a7"; font.pixelSize: 12; font.bold: true }
+                            Text { text: root.energySystem.efficiencyPercent.toFixed(1) + "%"; color: "#79d6a7"; font.pixelSize: 12; font.bold: true }
                         }
                     }
                 }

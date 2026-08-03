@@ -144,6 +144,7 @@ Item {
             columnSpacing: 6
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Trip Speed"
                 cardSubtitle: "Lift-off and cruise speed during your Air Taxi ride"
                 iconType: "speed"
@@ -172,6 +173,7 @@ Item {
             }
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Altitude Window"
                 cardSubtitle: "Current cabin altitude profile and clearance"
                 iconType: "altitude"
@@ -200,6 +202,7 @@ Item {
             }
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Climb and Descent"
                 cardSubtitle: "How fast the Air Taxi is rising or lowering"
                 iconType: "vertical"
@@ -215,11 +218,12 @@ Item {
                 Layout.preferredHeight: Math.max(200, implicitHeight)
                 Layout.minimumHeight: 200
 
-                Text { text: flightSimulation.vsValueText; color: "#e1f3ff"; font.pixelSize: 17; font.bold: true }
-                Text { text: flightSimulation.vsTrendLabel; font.pixelSize: 10; color: "#9ec4f5" }
+                Text { text: flightModel.vsValueText; color: "#e1f3ff"; font.pixelSize: 17; font.bold: true }
+                Text { text: flightModel.vsTrendLabel; font.pixelSize: 10; color: "#9ec4f5" }
             }
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Ride Stability"
                 cardSubtitle: "Cabin balance and comfort during the trip"
                 iconType: "attitude"
@@ -277,6 +281,7 @@ Item {
             }
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Route Direction"
                 cardSubtitle: "Current heading and route alignment"
                 iconType: "heading"
@@ -317,6 +322,7 @@ Item {
             }
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Path Guidance"
                 cardSubtitle: "How closely the vehicle follows the planned path"
                 iconType: "fpv"

@@ -9,153 +9,54 @@ Item {
     required property var moduleRegistry
 
     readonly property var flightModel: root.moduleRegistry.primaryFlight
-    property real simulationPhase: 0.0
+    readonly property var safety: root.moduleRegistry.safetySystem
     property int selectedMonitor: 0
-    property int noiseLimit: 75
-    property var noiseHistory: [63, 65, 64, 67, 69, 68, 70, 72, 71, 69, 68, 70]
-    property int parachuteState: 0
-    property real parachuteProgress: 0.0
-    property bool parachuteTestOverride: false
-    property string parachuteEventTime: "--:--:--"
-    property int selectedTraffic: 0
+    readonly property int selectedTraffic: root.safety.selectedTraffic
     property int radarRange: 5
-    property bool gnssTestMode: false
     property int approachMode: 0
 
-    onParachuteStateChanged: parachuteCanvas.requestPaint()
+    readonly property int noiseLimit: root.safety.noiseLimit
+    readonly property var noiseHistory: root.safety.noiseHistory
+    readonly property real acousticDb: root.safety.acousticDb
+    readonly property bool noiseWarning: root.safety.noiseWarning
+    readonly property int satelliteCount: root.safety.satelliteCount
+    readonly property real signalStrength: root.safety.signalStrength
+    readonly property real navigationAccuracy: root.safety.navigationAccuracy
+    readonly property bool raimAvailable: root.safety.raimAvailable
+    readonly property real lateralDeviation: root.safety.lateralDeviation
+    readonly property real verticalDeviation: root.safety.verticalDeviation
+    readonly property real alignmentQuality: root.safety.alignmentQuality
+    readonly property bool landingPhase: root.safety.landingPhase
+    readonly property int parachuteState: root.safety.parachuteState
+    readonly property real parachuteProgress: root.safety.parachuteProgress
+    readonly property bool parachuteTestOverride: root.safety.parachuteTestOverride
+    readonly property string parachuteEventTime: root.safety.parachuteEventTime
+    readonly property bool parachuteEnvelopeValid: root.safety.parachuteEnvelopeValid
+    readonly property bool parachuteDeployAllowed: root.safety.parachuteDeployAllowed
+    readonly property string parachuteInhibitReason: root.safety.parachuteInhibitReason
+    readonly property bool gnssTestMode: root.safety.gnssTestMode
+    readonly property int alertCount: root.safety.alertCount
 
-    readonly property real rpmAverage: root.average(root.flightModel.motorRpmValues)
-    readonly property real acousticDb: root.clamp(54 + root.rpmAverage / 145
-                                                  + Number(root.flightModel.cas) / 22
-                                                  + 2.5 * Math.sin(root.simulationPhase * 1.4), 48, 96)
-    readonly property bool noiseWarning: root.acousticDb >= root.noiseLimit
-    readonly property int satelliteCount: root.gnssTestMode ? 7
-                                          : Math.round(13 + 2 * Math.sin(root.simulationPhase * 0.35))
-    readonly property real signalStrength: root.gnssTestMode ? 46
-                                           : 88 + 5 * Math.sin(root.simulationPhase * 0.55)
-    readonly property real navigationAccuracy: root.gnssTestMode ? 4.8
-                                               : 0.7 + 0.25 * Math.abs(Math.sin(root.simulationPhase * 0.72))
-    readonly property bool raimAvailable: root.satelliteCount >= 8 && root.navigationAccuracy < 2.0
-    readonly property real lateralDeviation: root.clamp((Number(root.flightModel.track)
-                                                         - Number(root.flightModel.heading)) * 0.45
-                                                        + 0.25 * Math.sin(root.simulationPhase), -2.5, 2.5)
-    readonly property real verticalDeviation: root.clamp(Number(root.flightModel.vs) / 900
-                                                         + 0.2 * Math.cos(root.simulationPhase * 0.8), -2.5, 2.5)
-    readonly property real alignmentQuality: root.clamp(100 - Math.abs(root.lateralDeviation) * 17
-                                                        - Math.abs(root.verticalDeviation) * 12, 0, 100)
-    readonly property bool landingPhase: String(root.flightModel.flightModeLabel).indexOf("Arrival") >= 0
-                                         || Number(root.flightModel.altRadar) < 150
-    readonly property bool parachuteEnvelopeValid: Number(root.flightModel.altRadar) >= 100
-                                                    && Number(root.flightModel.cas) >= 15
-                                                    && Number(root.flightModel.cas) <= 150
-    readonly property bool parachuteDeployAllowed: root.parachuteState === 1
-                                                   && (root.parachuteEnvelopeValid || root.parachuteTestOverride)
-    readonly property string parachuteInhibitReason: Number(root.flightModel.altRadar) < 100 ? "INHIBIT: RADAR ALT < 100 FT"
-                                                       : (Number(root.flightModel.cas) < 15 ? "INHIBIT: AIRSPEED < 15 KT"
-                                                       : (Number(root.flightModel.cas) > 150 ? "INHIBIT: AIRSPEED > 150 KT" : "DEPLOYMENT ENVELOPE VALID"))
-    readonly property int alertCount: (root.noiseWarning ? 1 : 0)
-                                      + (!root.raimAvailable ? 1 : 0)
-                                      + (root.trafficRange(root.selectedTraffic) < 1.0 ? 1 : 0)
-
-    function clamp(value, minimum, maximum) {
-        return Math.max(minimum, Math.min(maximum, value))
-    }
-
-    function average(values) {
-        if (!values || values.length === 0)
-            return 0
-        var total = 0
-        for (var index = 0; index < values.length; ++index)
-            total += Number(values[index])
-        return total / values.length
-    }
-
-    function monitorCode(index) {
-        return ["NOISE", "BRS", "TCAS", "GNSS", "LANDING"][index]
-    }
-
-    function monitorSummary(index) {
-        if (index === 0)
-            return root.acousticDb.toFixed(1) + " dBA  |  LIMIT " + root.noiseLimit + " dBA"
-        if (index === 1)
-            return root.parachuteState === 0 ? "SYSTEM SAFE"
-                   : (root.parachuteState === 1 ? "ARMED / READY"
-                   : (root.parachuteState === 2 ? "DEPLOYING " + Math.round(root.parachuteProgress * 100) + "%" : "DEPLOYED"))
-        if (index === 2)
-            return root.trafficCode(root.selectedTraffic) + "  |  " + root.trafficRange(root.selectedTraffic).toFixed(1) + " NM"
-        if (index === 3)
-            return root.satelliteCount + " SAT  |  HPL " + root.navigationAccuracy.toFixed(1) + " m  |  RAIM " + (root.raimAvailable ? "PASS" : "FAIL")
-        return "ALIGN " + root.alignmentQuality.toFixed(0) + "%  |  LAT " + root.signed(root.lateralDeviation) + " m"
-    }
-
-    function signed(value) {
-        return (value >= 0 ? "+" : "") + value.toFixed(1)
-    }
-
-    function trafficCode(index) {
-        return ["TFC-21", "TFC-07", "OBS-14"][index]
-    }
-
-    function trafficRange(index) {
-        var baseRanges = [1.35, 2.8, 0.72]
-        return Math.max(0.18, baseRanges[index] + 0.18 * Math.sin(root.simulationPhase * (0.7 + index * 0.16) + index))
-    }
-
-    function trafficBearing(index) {
-        return [38, 218, 312][index] + 8 * Math.sin(root.simulationPhase * 0.5 + index)
-    }
-
+    function monitorCode(index) { return root.safety.monitorCode(index) }
+    function monitorSummary(index) { return root.safety.monitorSummaries[index] }
+    function signed(value) { return root.safety.signedValue(value) }
+    function trafficCode(index) { return root.safety.trafficCode(index) }
+    function trafficRange(index) { return root.safety.trafficRanges[index] }
+    function trafficBearing(index) { return root.safety.trafficBearings[index] }
     function toggleParachuteArm() {
         root.selectedMonitor = 1
-        if (root.parachuteState === 0) {
-            root.parachuteState = 1
-            root.parachuteEventTime = Qt.formatTime(new Date(), "hh:mm:ss")
-        } else if (root.parachuteState === 1) {
-            root.parachuteState = 0
-            root.parachuteEventTime = Qt.formatTime(new Date(), "hh:mm:ss")
-        }
+        root.safety.toggleParachuteArm()
     }
-
     function deployOrResetParachute() {
         root.selectedMonitor = 1
-        if (root.parachuteState === 3) {
-            root.parachuteState = 0
-            root.parachuteProgress = 0
-            root.parachuteTestOverride = false
-            root.parachuteEventTime = Qt.formatTime(new Date(), "hh:mm:ss")
-        } else if (root.parachuteDeployAllowed) {
-            root.parachuteProgress = 0
-            root.parachuteState = 2
-            root.parachuteEventTime = Qt.formatTime(new Date(), "hh:mm:ss")
-        }
+        root.safety.deployOrResetParachute()
     }
 
-    Timer {
-        interval: 80
-        running: root.parachuteState === 2
-        repeat: true
-        onTriggered: {
-            root.parachuteProgress = Math.min(1, root.parachuteProgress + 0.035)
-            parachuteCanvas.requestPaint()
-            if (root.parachuteProgress >= 1) {
-                root.parachuteState = 3
-                root.parachuteEventTime = Qt.formatTime(new Date(), "hh:mm:ss")
-            }
-        }
-    }
-
-    Timer {
-        interval: 500
-        running: root.visible
-        repeat: true
-        onTriggered: {
-            root.simulationPhase += 0.18
-            var updatedHistory = root.noiseHistory.slice(0)
-            updatedHistory.push(root.acousticDb)
-            while (updatedHistory.length > 28)
-                updatedHistory.shift()
-            root.noiseHistory = updatedHistory
+    Connections {
+        target: root.safety
+        function onStateChanged() {
             noiseCanvas.requestPaint()
+            parachuteCanvas.requestPaint()
             trafficCanvas.requestPaint()
             alignmentCanvas.requestPaint()
         }
@@ -305,7 +206,7 @@ Item {
                                         color: root.noiseLimit === limitButton.modelData ? "#694f2c" : "#1a2b2f"
                                         border.color: root.noiseLimit === limitButton.modelData ? "#edbd68" : "#354b4e"
                                         Label { anchors.centerIn: parent; text: limitButton.modelData; color: "#d8c196"; font.pixelSize: 7; font.bold: true }
-                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.noiseLimit = limitButton.modelData }
+                                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.safety.setNoiseLimit(limitButton.modelData) }
                                     }
                                 }
                             }
@@ -364,7 +265,7 @@ Item {
                             color: root.parachuteTestOverride ? "#513b24" : "#17282c"
                             border.color: root.parachuteTestOverride ? "#e0aa59" : "#3b5053"
                             Label { anchors.centerIn: parent; text: root.parachuteTestOverride ? "TEST ON" : "TEST OFF"; color: root.parachuteTestOverride ? "#ffd28a" : "#789092"; font.pixelSize: 7; font.bold: true }
-                            MouseArea { anchors.fill: parent; enabled: root.parachuteState < 2; cursorShape: Qt.PointingHandCursor; onClicked: root.parachuteTestOverride = !root.parachuteTestOverride }
+                            MouseArea { anchors.fill: parent; enabled: root.parachuteState < 2; cursorShape: Qt.PointingHandCursor; onClicked: root.safety.toggleParachuteTestOverride() }
                         }
                         Label {
                             text: root.parachuteState === 0 ? "SAFE"
@@ -552,7 +453,7 @@ Item {
                                         Label { anchors.horizontalCenter: parent.horizontalCenter; text: root.trafficCode(trafficRow.index); color: "#e7c0b8"; font.pixelSize: 8; font.bold: true }
                                         Label { anchors.horizontalCenter: parent.horizontalCenter; text: root.trafficRange(trafficRow.index).toFixed(1) + " NM"; color: "#879fa0"; font.pixelSize: 7 }
                                     }
-                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.selectedMonitor = 2; root.selectedTraffic = trafficRow.index; trafficCanvas.requestPaint() } }
+                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.selectedMonitor = 2; root.safety.setSelectedTraffic(trafficRow.index); trafficCanvas.requestPaint() } }
                                 }
                             }
                         }
@@ -628,7 +529,7 @@ Item {
                                 color: root.gnssTestMode ? "#56372c" : "#183035"
                                 border.color: root.gnssTestMode ? "#ee9374" : "#4f807b"
                                 Label { anchors.centerIn: parent; text: root.gnssTestMode ? "END INTERFERENCE TEST" : "SIMULATE INTERFERENCE"; color: root.gnssTestMode ? "#ffd0c5" : "#a9d7cd"; font.pixelSize: 8; font.bold: true }
-                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.selectedMonitor = 3; root.gnssTestMode = !root.gnssTestMode } }
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.selectedMonitor = 3; root.safety.toggleGnssTestMode() } }
                             }
                         }
                     }

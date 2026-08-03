@@ -13,34 +13,14 @@ Item {
     property int selectedInstrument: 0
     property int hoveredInstrument: -1
 
-    readonly property real headingTrackDelta: {
-        var delta = Number(root.flightModel.track) - Number(root.flightModel.heading)
-        while (delta > 180)
-            delta -= 360
-        while (delta < -180)
-            delta += 360
-        return delta
-    }
-    readonly property real slipOffset: Math.max(-1, Math.min(1,
-        (Number(root.flightModel.yaw) - Number(root.flightModel.track)) / 12.0))
+    readonly property real headingTrackDelta: root.flightModel.headingTrackDelta
+    readonly property real slipOffset: root.flightModel.slipOffset
     readonly property int panelSpacing: 6
     readonly property real instrumentWidth: Math.max(0,
         (instrumentGrid.width - root.panelSpacing * 2) / 3)
     readonly property real instrumentHeight: Math.max(0,
         (instrumentGrid.height - root.panelSpacing) / 2)
-    readonly property string selectedSummary: {
-        if (root.selectedInstrument === 0)
-            return "CAS " + Number(root.flightModel.cas).toFixed(0) + " kt  |  TAS " + Number(root.flightModel.tas).toFixed(0) + " kt"
-        if (root.selectedInstrument === 1)
-            return "BARO " + Number(root.flightModel.altBaro).toFixed(0) + " ft  |  RADIO " + Number(root.flightModel.altRadar).toFixed(0) + " ft"
-        if (root.selectedInstrument === 2)
-            return "VERTICAL RATE " + (Number(root.flightModel.vs) >= 0 ? "+" : "") + Number(root.flightModel.vs).toFixed(0) + " ft/min"
-        if (root.selectedInstrument === 3)
-            return "PITCH " + Number(root.flightModel.pitch).toFixed(1) + "°  |  ROLL " + Number(root.flightModel.roll).toFixed(1) + "°  |  YAW " + Number(root.flightModel.yaw).toFixed(1) + "°"
-        if (root.selectedInstrument === 4)
-            return "MAG " + Number(root.flightModel.heading).toFixed(0) + "°  |  TRACK " + Number(root.flightModel.track).toFixed(0) + "°  |  DRIFT " + root.headingTrackDelta.toFixed(1) + "°"
-        return "PATH QUALITY " + Number(root.flightModel.fpvProgress * 100).toFixed(0) + "%  |  CROSS-TRACK " + root.headingTrackDelta.toFixed(1) + "°"
-    }
+    readonly property string selectedSummary: root.flightModel.instrumentSummary(root.selectedInstrument)
 
     function instrumentCode(index) {
         return ["SPD", "ALT", "V/S", "ATT", "HDG", "FPV"][index]
@@ -224,7 +204,7 @@ Item {
                             Item {
                                 id: speedMark
                                 required property int index
-                                readonly property real value: Math.round(Number(root.flightModel.cas) / 10) * 10 + (4 - speedMark.index) * 10
+                                readonly property real value: root.flightModel.speedTapeValue(speedMark.index)
                                 x: 0
                                 y: speedTape.height * 0.5 + (Number(root.flightModel.cas) - speedMark.value) * 2.0 - 8
                                 width: speedTape.width * 0.46
@@ -358,7 +338,7 @@ Item {
                             Item {
                                 id: altitudeMark
                                 required property int index
-                                readonly property real value: Math.round(Number(root.flightModel.altBaro) / 500) * 500 + (4 - altitudeMark.index) * 500
+                                readonly property real value: root.flightModel.altitudeTapeValue(altitudeMark.index)
                                 x: altitudeTape.width * 0.53
                                 y: altitudeTape.height * 0.5 + (Number(root.flightModel.altBaro) - altitudeMark.value) * 0.045 - 8
                                 width: altitudeTape.width * 0.47
@@ -484,7 +464,7 @@ Item {
                             RowLayout {
                                 id: verticalMark
                                 required property int index
-                                readonly property int rate: (3 - verticalMark.index) * 1000
+                                readonly property int rate: root.flightModel.verticalSpeedMark(verticalMark.index)
                                 x: verticalGauge.width * 0.5 - 48
                                 y: verticalGauge.height * 0.5 - 7 + (verticalMark.index - 3) * (verticalGauge.height - 20) / 6
                                 width: 96

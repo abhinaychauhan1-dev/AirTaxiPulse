@@ -7,6 +7,7 @@ SOURCES += \
     src/services/FlightSimulationService.cpp \
     src/viewmodel/AirTaxiModuleRegistry.cpp \
     src/viewmodel/FeatureOverviewViewModel.cpp \
+    src/viewmodel/OperationalViewModels.cpp \
     src/viewmodel/PrimaryFlightViewModel.cpp \
     src/model/FlightTelemetryData.cpp
 HEADERS += \
@@ -14,6 +15,7 @@ HEADERS += \
     src/services/FlightSimulationService.h \
     src/viewmodel/AirTaxiModuleRegistry.h \
     src/viewmodel/FeatureOverviewViewModel.h \
+    src/viewmodel/OperationalViewModels.h \
     src/viewmodel/PrimaryFlightViewModel.h \
     src/model/FlightTelemetryData.h
 

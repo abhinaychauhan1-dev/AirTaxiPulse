@@ -18,6 +18,11 @@ AirTaxiModuleRegistry::AirTaxiModuleRegistry(QObject *parent)
     , m_telemetrySource(m_ownedFlightSimulation.get())
     , m_telemetryNotifier(m_ownedFlightSimulation.get())
     , m_primaryFlight(QStringLiteral("Primary Flight & Navigation Data"), *m_telemetrySource, this)
+    , m_session(this)
+    , m_propulsionSystem(*m_telemetrySource, this)
+    , m_energySystem(*m_telemetrySource, this)
+    , m_flightControlSystem(*m_telemetrySource, this)
+    , m_safetySystem(*m_telemetrySource, this)
     , m_propulsion(
           QStringLiteral("Propulsion & Distributed Electric Propulsion (DEP) Data"),
           QStringLiteral("Monitor propulsion status, motor RPM, distributed electric propulsion health, thrust balance and thermal state for each pod."),
@@ -61,6 +66,18 @@ AirTaxiModuleRegistry::AirTaxiModuleRegistry(QObject *parent)
 {
     QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
                      &m_primaryFlight, SIGNAL(telemetryChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_propulsionSystem, SIGNAL(telemetryChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_energySystem, SIGNAL(telemetryChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_flightControlSystem, SIGNAL(telemetryChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_flightControlSystem, SIGNAL(stateChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_safetySystem, SIGNAL(telemetryChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_safetySystem, SIGNAL(stateChanged()));
 }
 
 AirTaxiModuleRegistry::AirTaxiModuleRegistry(IFlightTelemetrySource &telemetrySource,
@@ -71,6 +88,11 @@ AirTaxiModuleRegistry::AirTaxiModuleRegistry(IFlightTelemetrySource &telemetrySo
     , m_telemetrySource(&telemetrySource)
     , m_telemetryNotifier(&telemetryNotifier)
     , m_primaryFlight(QStringLiteral("Primary Flight & Navigation Data"), *m_telemetrySource, this)
+    , m_session(this)
+    , m_propulsionSystem(*m_telemetrySource, this)
+    , m_energySystem(*m_telemetrySource, this)
+    , m_flightControlSystem(*m_telemetrySource, this)
+    , m_safetySystem(*m_telemetrySource, this)
     , m_propulsion(
           QStringLiteral("Propulsion & Distributed Electric Propulsion (DEP) Data"),
           QStringLiteral("Monitor propulsion status, motor RPM, distributed electric propulsion health, thrust balance and thermal state for each pod."),
@@ -114,6 +136,18 @@ AirTaxiModuleRegistry::AirTaxiModuleRegistry(IFlightTelemetrySource &telemetrySo
 {
     QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
                      &m_primaryFlight, SIGNAL(telemetryChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_propulsionSystem, SIGNAL(telemetryChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_energySystem, SIGNAL(telemetryChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_flightControlSystem, SIGNAL(telemetryChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_flightControlSystem, SIGNAL(stateChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_safetySystem, SIGNAL(telemetryChanged()));
+    QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
+                     &m_safetySystem, SIGNAL(stateChanged()));
 }
 
 PrimaryFlightViewModel *AirTaxiModuleRegistry::primaryFlight() const
@@ -139,4 +173,29 @@ FeatureOverviewViewModel *AirTaxiModuleRegistry::fcs() const
 FeatureOverviewViewModel *AirTaxiModuleRegistry::safety() const
 {
     return const_cast<FeatureOverviewViewModel *>(&m_safety);
+}
+
+FlightSessionViewModel *AirTaxiModuleRegistry::session() const
+{
+    return const_cast<FlightSessionViewModel *>(&m_session);
+}
+
+PropulsionSystemViewModel *AirTaxiModuleRegistry::propulsionSystem() const
+{
+    return const_cast<PropulsionSystemViewModel *>(&m_propulsionSystem);
+}
+
+EnergySystemViewModel *AirTaxiModuleRegistry::energySystem() const
+{
+    return const_cast<EnergySystemViewModel *>(&m_energySystem);
+}
+
+FlightControlSystemViewModel *AirTaxiModuleRegistry::flightControlSystem() const
+{
+    return const_cast<FlightControlSystemViewModel *>(&m_flightControlSystem);
+}
+
+SafetySystemViewModel *AirTaxiModuleRegistry::safetySystem() const
+{
+    return const_cast<SafetySystemViewModel *>(&m_safetySystem);
 }

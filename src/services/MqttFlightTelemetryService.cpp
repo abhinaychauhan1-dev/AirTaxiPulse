@@ -124,6 +124,21 @@ void MqttFlightTelemetryService::setMaxPendingMessages(int maxPendingMessages)
     m_client.setMaxPendingMessages(maxPendingMessages);
 }
 
+void MqttFlightTelemetryService::decreaseParserConcurrency()
+{
+    setMaxConcurrentParsers(qMax(1, maxConcurrentParsers() - 1));
+}
+
+void MqttFlightTelemetryService::increaseParserConcurrency()
+{
+    setMaxConcurrentParsers(qMin(16, maxConcurrentParsers() + 1));
+}
+
+void MqttFlightTelemetryService::increasePendingCapacity()
+{
+    setMaxPendingMessages(qMin(4096, maxPendingMessages() + 32));
+}
+
 quint64 MqttFlightTelemetryService::droppedMessageCount() const
 {
     return m_client.droppedMessageCount();

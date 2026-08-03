@@ -22,6 +22,8 @@ class PrimaryFlightViewModel : public QObject
     Q_PROPERTY(double yaw READ yaw NOTIFY telemetryChanged)
     Q_PROPERTY(double heading READ heading NOTIFY telemetryChanged)
     Q_PROPERTY(double track READ track NOTIFY telemetryChanged)
+    Q_PROPERTY(double headingTrackDelta READ headingTrackDelta NOTIFY telemetryChanged)
+    Q_PROPERTY(double slipOffset READ slipOffset NOTIFY telemetryChanged)
     Q_PROPERTY(double casProgress READ casProgress NOTIFY telemetryChanged)
     Q_PROPERTY(double altProgress READ altProgress NOTIFY telemetryChanged)
     Q_PROPERTY(double vsProgress READ vsProgress NOTIFY telemetryChanged)
@@ -50,6 +52,8 @@ class PrimaryFlightViewModel : public QObject
     Q_PROPERTY(QVariantList inverterHealth READ inverterHealth NOTIFY telemetryChanged)
     Q_PROPERTY(double gpsLatitude READ gpsLatitude NOTIFY telemetryChanged)
     Q_PROPERTY(double gpsLongitude READ gpsLongitude NOTIFY telemetryChanged)
+    Q_PROPERTY(QString gpsText READ gpsText NOTIFY telemetryChanged)
+    Q_PROPERTY(double averageMotorTemperature READ averageMotorTemperature NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList casHistory READ casHistory NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList altHistory READ altHistory NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList vsHistory READ vsHistory NOTIFY telemetryChanged)
@@ -79,6 +83,8 @@ public:
     double yaw() const;
     double heading() const;
     double track() const;
+    double headingTrackDelta() const;
+    double slipOffset() const;
     double casProgress() const;
     double altProgress() const;
     double vsProgress() const;
@@ -107,6 +113,8 @@ public:
     QVariantList inverterHealth() const;
     double gpsLatitude() const;
     double gpsLongitude() const;
+    QString gpsText() const;
+    double averageMotorTemperature() const;
     QVariantList casHistory() const;
     QVariantList altHistory() const;
     QVariantList vsHistory() const;
@@ -118,6 +126,13 @@ public:
     QVariantList propulsionTempHistory() const;
     QVariantList propulsionThrustHistory() const;
     QVariantList propulsionInverterHealthHistory() const;
+
+    Q_INVOKABLE QString instrumentSummary(int index) const;
+    Q_INVOKABLE double speedTapeValue(int index) const;
+    Q_INVOKABLE double altitudeTapeValue(int index) const;
+    Q_INVOKABLE int verticalSpeedMark(int index) const;
+    Q_INVOKABLE QString progressConfidence(double progress) const;
+    Q_INVOKABLE QString historyTrend(const QVariantList &values) const;
 
 signals:
     void telemetryChanged();

@@ -8,6 +8,7 @@ Item {
     id: root
     required property var moduleRegistry
     readonly property var flightModel: moduleRegistry.primaryFlight
+    readonly property var propulsionModel: moduleRegistry.propulsionSystem
     readonly property var rpmValues: flightModel.motorRpmValues || []
     readonly property var tempValues: flightModel.motorTemperatures || []
     readonly property var thrustValues: flightModel.thrustOutputs || []
@@ -17,49 +18,13 @@ Item {
     property int cardColumns: width > 700 ? 2 : 1
     property real rotorPhase: 0.0
 
-    readonly property real frontGroupRpm: {
-        if (rpmValues.length < 2)
-            return 0
-        return (Number(rpmValues[0]) + Number(rpmValues[1])) / 2
-    }
-
-    readonly property real rearGroupRpm: {
-        if (rpmValues.length < 4)
-            return 0
-        return (Number(rpmValues[2]) + Number(rpmValues[3])) / 2
-    }
-
-    readonly property real averageMotorTemp: {
-        if (tempValues.length === 0)
-            return 0
-        var total = 0
-        for (var i = 0; i < tempValues.length; ++i)
-            total += Number(tempValues[i])
-        return total / tempValues.length
-    }
-
-    readonly property real combinedThrust: {
-        if (thrustValues.length === 0)
-            return 0
-        var total = 0
-        for (var i = 0; i < thrustValues.length; ++i)
-            total += Number(thrustValues[i])
-        return total
-    }
-
-    readonly property real inverterHealthAverage: {
-        if (inverterHealthValues.length === 0)
-            return 0
-        var total = 0
-        for (var i = 0; i < inverterHealthValues.length; ++i)
-            total += Number(inverterHealthValues[i])
-        return total / inverterHealthValues.length
-    }
-
-    readonly property real averageRpm: (frontGroupRpm + rearGroupRpm) * 0.5
-    readonly property string propulsionState: averageMotorTemp >= 85
-        ? "THERMAL LIMIT"
-        : (inverterHealthAverage < 90 ? "DEGRADED" : "NOMINAL")
+    readonly property real frontGroupRpm: root.propulsionModel.frontGroupRpm
+    readonly property real rearGroupRpm: root.propulsionModel.rearGroupRpm
+    readonly property real averageMotorTemp: root.propulsionModel.averageMotorTemperature
+    readonly property real combinedThrust: root.propulsionModel.combinedThrust
+    readonly property real inverterHealthAverage: root.propulsionModel.inverterHealthAverage
+    readonly property real averageRpm: root.propulsionModel.averageRpm
+    readonly property string propulsionState: root.propulsionModel.stateLabel
 
     Timer {
         interval: 40
@@ -96,7 +61,7 @@ Item {
 
             Label {
                 text: root.propulsionState
-                color: root.propulsionState === "NOMINAL" ? "#7ee082" : "#ffb26f"
+                color: root.propulsionState === "ALL CHANNELS NOMINAL" ? "#7ee082" : "#ffb26f"
                 font.pixelSize: 10
                 font.bold: true
             }
@@ -172,7 +137,7 @@ Item {
                                         height: 34
                                         radius: 17
                                         color: "#0b1921"
-                                        border.color: Number(root.inverterHealthValues[index] || 0) >= 90 ? "#67d7cf" : "#ff9f7a"
+                                        border.color: root.propulsionModel.inverterHealthWarnings[index] ? "#ff9f7a" : "#67d7cf"
                                         border.width: 2
                                     }
 
@@ -198,7 +163,7 @@ Item {
                                 Label {
                                     Layout.alignment: Qt.AlignHCenter
                                     text: Number(root.tempValues[index] || 0).toFixed(0) + " C"
-                                    color: Number(root.tempValues[index] || 0) >= 85 ? "#ff9f7a" : "#7fa8bc"
+                                    color: root.propulsionModel.motorThermalWarnings[index] ? "#ff9f7a" : "#7fa8bc"
                                     font.pixelSize: 8
                                 }
                             }
@@ -228,6 +193,7 @@ Item {
             columnSpacing: 6
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Motor RPM"
                 cardSubtitle: "Individual and grouped motor rotational speeds"
                 iconType: "propulsion"
@@ -235,7 +201,7 @@ Item {
                 accentColor: "#76c2ff"
                 motionSeed: 0.3
                 motionRate: 0.024
-                progressValue: Math.min(1.0, Math.max(0.0, ((root.frontGroupRpm + root.rearGroupRpm) * 0.5) / 2800.0))
+                progressValue: root.propulsionModel.rpmProgress
                 progressLabel: "Rotor speed readiness"
                 sparkValues: flightModel.propulsionRpmHistory
                 Layout.fillWidth: true
@@ -267,6 +233,7 @@ Item {
             }
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Tilt Angle"
                 cardSubtitle: "Nacelle or rotor tilt position"
                 iconType: "propulsion"
@@ -274,7 +241,7 @@ Item {
                 accentColor: "#f3bf68"
                 motionSeed: 1.15
                 motionRate: 0.028
-                progressValue: 1.0 - Math.min(1.0, Math.max(0.0, Number(flightModel.tiltAngleDeg) / 90.0))
+                progressValue: root.propulsionModel.tiltProgress
                 progressLabel: "Forward-flight transition"
                 sparkValues: flightModel.propulsionTiltHistory
                 Layout.fillWidth: true
@@ -290,13 +257,14 @@ Item {
                     font.bold: true
                 }
                 Text {
-                    text: Number(flightModel.tiltAngleDeg) > 45 ? "Hover-biased" : "Cruise-biased"
+                    text: root.propulsionModel.tiltProfileLabel
                     color: "#f9d89f"
                     font.pixelSize: 10
                 }
             }
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Motor Temperature"
                 cardSubtitle: "Thermal telemetry per motor group"
                 iconType: "propulsion"
@@ -304,7 +272,7 @@ Item {
                 accentColor: "#ff9f7a"
                 motionSeed: 2.0
                 motionRate: 0.041
-                progressValue: Math.min(1.0, Math.max(0.0, root.averageMotorTemp / 95.0))
+                progressValue: root.propulsionModel.temperatureProgress
                 progressLabel: "Thermal load"
                 sparkValues: flightModel.propulsionTempHistory
                 Layout.fillWidth: true
@@ -331,6 +299,7 @@ Item {
             }
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Thrust Vector / Output"
                 cardSubtitle: "Real-time thrust generation per motor group"
                 iconType: "propulsion"
@@ -338,7 +307,7 @@ Item {
                 accentColor: "#74e2d8"
                 motionSeed: 3.1
                 motionRate: 0.03
-                progressValue: Math.min(1.0, Math.max(0.0, root.combinedThrust / 28.0))
+                progressValue: root.propulsionModel.thrustProgress
                 progressLabel: "Total thrust authority"
                 sparkValues: flightModel.propulsionThrustHistory
                 Layout.fillWidth: true
@@ -360,6 +329,7 @@ Item {
             }
 
             FlightSimulationCard {
+                dataModel: flightModel
                 cardTitle: "Inverter Status"
                 cardSubtitle: "Voltage, current, and health per motor controller"
                 iconType: "propulsion"
@@ -367,7 +337,7 @@ Item {
                 accentColor: "#8dc8ff"
                 motionSeed: 4.4
                 motionRate: 0.022
-                progressValue: Math.min(1.0, Math.max(0.0, root.inverterHealthAverage / 100.0))
+                progressValue: root.propulsionModel.inverterProgress
                 progressLabel: "Controller health"
                 sparkValues: flightModel.propulsionInverterHealthHistory
                 Layout.fillWidth: true

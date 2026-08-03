@@ -15,27 +15,15 @@ Item {
     property string progressLabel: ""
     property bool showProgress: true
     property var sparkValues: []
+    required property var dataModel
     property real motionPhase: 0.0
     property real motionRate: 0.035
     property real motionSeed: 0.0
     default property alias content: customContentColumn.data
 
     readonly property real normalizedProgress: Math.max(0.0, Math.min(1.0, root.progressValue))
-    readonly property string confidenceText: normalizedProgress >= 0.72 ? "High" : (normalizedProgress >= 0.45 ? "Moderate" : "Low")
-    readonly property string trendText: {
-        var values = root.sparkValues || []
-        if (values.length < 2) {
-            return "Stable"
-        }
-        var delta = values[values.length - 1] - values[values.length - 2]
-        if (delta > 0.001) {
-            return "Rising"
-        }
-        if (delta < -0.001) {
-            return "Falling"
-        }
-        return "Stable"
-    }
+    readonly property string confidenceText: root.dataModel.progressConfidence(root.normalizedProgress)
+    readonly property string trendText: root.dataModel.historyTrend(root.sparkValues)
 
     property bool hovered: false
 

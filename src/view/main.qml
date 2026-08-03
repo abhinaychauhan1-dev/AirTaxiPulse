@@ -24,8 +24,6 @@ ApplicationWindow {
     title: qsTr("Air Taxi eVTOL Pulse")
 
     property int currentIndex: 0
-    property date currentDateTime: new Date()
-    property int elapsedSeconds: 0
     property real headerPhase: 0.0
     property bool simPanelHovered: false
     property bool simDetailedMode: false
@@ -34,48 +32,15 @@ ApplicationWindow {
     readonly property int mqttParserWorkers: mqttAvailable && mqttTelemetry ? mqttTelemetry.maxConcurrentParsers : 0
     readonly property int mqttPendingCap: mqttAvailable && mqttTelemetry ? mqttTelemetry.maxPendingMessages : 0
     readonly property int mqttDroppedCount: mqttAvailable && mqttTelemetry ? mqttTelemetry.droppedMessageCount : 0
-    readonly property var motorTemps: airTaxiModules.primaryFlight.motorTemperatures
-    readonly property real motorTempAverage: {
-        if (!motorTemps || motorTemps.length === 0)
-            return 0
-        var total = 0
-        for (var i = 0; i < motorTemps.length; ++i)
-            total += Number(motorTemps[i])
-        return total / motorTemps.length
-    }
-    readonly property string gpsText: {
-        var lat = airTaxiModules.primaryFlight.gpsLatitude
-        var lon = airTaxiModules.primaryFlight.gpsLongitude
-        if (!isFinite(lat) || !isFinite(lon))
-            return "N/A"
-        return lat.toFixed(5) + ", " + lon.toFixed(5)
-    }
+    readonly property real motorTempAverage: airTaxiModules.primaryFlight.averageMotorTemperature
+    readonly property string gpsText: airTaxiModules.primaryFlight.gpsText
 
-    readonly property int simCruiseKnots: 120 + Math.round(Math.sin(window.headerPhase * 0.9) * 18)
-    readonly property int simAltitudeFeet: 1800 + Math.round((Math.sin(window.headerPhase * 0.55) + 1) * 1500)
+    readonly property int simCruiseKnots: Math.round(airTaxiModules.primaryFlight.tas)
+    readonly property int simAltitudeFeet: Math.round(airTaxiModules.primaryFlight.altBaro)
 
-    readonly property string currentDateText: Qt.formatDate(window.currentDateTime, "ddd, dd MMM yyyy")
-    readonly property string currentTimeText: Qt.formatTime(window.currentDateTime, "hh:mm:ss")
-    readonly property string elapsedText: {
-        var total = Math.max(0, window.elapsedSeconds)
-        var hours = Math.floor(total / 3600)
-        var minutes = Math.floor((total % 3600) / 60)
-        var seconds = total % 60
-        function pad2(value) {
-            return value < 10 ? "0" + value : "" + value
-        }
-        return pad2(hours) + ":" + pad2(minutes) + ":" + pad2(seconds)
-    }
-
-    Timer {
-        interval: 1000
-        running: true
-        repeat: true
-        onTriggered: {
-            window.currentDateTime = new Date()
-            window.elapsedSeconds += 1
-        }
-    }
+    readonly property string currentDateText: airTaxiModules.session.currentDateText
+    readonly property string currentTimeText: airTaxiModules.session.currentTimeText
+    readonly property string elapsedText: airTaxiModules.session.elapsedText
 
     Timer {
         interval: 60
@@ -360,7 +325,7 @@ ApplicationWindow {
                                 enabled: mqttAvailable
                                 onClicked: {
                                     if (mqttTelemetry)
-                                        mqttTelemetry.maxConcurrentParsers = Math.max(1, mqttTelemetry.maxConcurrentParsers - 1)
+                                        mqttTelemetry.decreaseParserConcurrency()
                                 }
                             }
 
@@ -369,7 +334,7 @@ ApplicationWindow {
                                 enabled: mqttAvailable
                                 onClicked: {
                                     if (mqttTelemetry)
-                                        mqttTelemetry.maxConcurrentParsers = Math.min(16, mqttTelemetry.maxConcurrentParsers + 1)
+                                        mqttTelemetry.increaseParserConcurrency()
                                 }
                             }
 
@@ -378,7 +343,7 @@ ApplicationWindow {
                                 enabled: mqttAvailable
                                 onClicked: {
                                     if (mqttTelemetry)
-                                        mqttTelemetry.maxPendingMessages = Math.min(4096, mqttTelemetry.maxPendingMessages + 32)
+                                        mqttTelemetry.increasePendingCapacity()
                                 }
                             }
                         }
