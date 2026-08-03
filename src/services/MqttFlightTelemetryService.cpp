@@ -1,5 +1,6 @@
 #include "MqttFlightTelemetryService.h"
 
+#include <QStringList>
 #include <QtMath>
 #include <cmath>
 
@@ -16,6 +17,11 @@ MqttFlightTelemetryService::MqttFlightTelemetryService(QObject *parent)
     , m_telemetry(this)
     , m_flightModeLabel(QStringLiteral("MQTT Standby"))
     , m_batterySoc(100.0)
+    , m_batterySoh(100.0)
+    , m_powerConsumptionKw(0.0)
+    , m_batteryCellTemperatures({0.0, 0.0, 0.0, 0.0, 0.0, 0.0})
+    , m_busVoltage(0.0)
+    , m_busCurrent(0.0)
     , m_motorTemperatures({0.0, 0.0, 0.0, 0.0})
     , m_motorRpmValues({0.0, 0.0, 0.0, 0.0})
     , m_tiltAngleDeg(0.0)
@@ -234,8 +240,7 @@ double MqttFlightTelemetryService::fpvProgress() const
 {
     const double pathError = wrappedAngleDeltaDegrees(track(), heading());
     const double verticalPenalty = qAbs(vs()) / 2200.0;
-    const double normalizedPathQuality = clamp(1.0 - pathError / 18.0 - verticalPenalty * 0.25, 0.0, 1.0);
-    return mapToBand(normalizedPathQuality, 0.24, 0.66);
+    return clamp(1.0 - pathError / 18.0 - verticalPenalty * 0.25, 0.0, 1.0);
 }
 
 QString MqttFlightTelemetryService::flightModeLabel() const
@@ -264,6 +269,36 @@ double MqttFlightTelemetryService::batterySoc() const
 {
     QReadLocker lock(&m_stateLock);
     return m_batterySoc;
+}
+
+double MqttFlightTelemetryService::batterySoh() const
+{
+    QReadLocker lock(&m_stateLock);
+    return m_batterySoh;
+}
+
+double MqttFlightTelemetryService::powerConsumptionKw() const
+{
+    QReadLocker lock(&m_stateLock);
+    return m_powerConsumptionKw;
+}
+
+QVariantList MqttFlightTelemetryService::batteryCellTemperatures() const
+{
+    QReadLocker lock(&m_stateLock);
+    return historyToVariantList(m_batteryCellTemperatures);
+}
+
+double MqttFlightTelemetryService::busVoltage() const
+{
+    QReadLocker lock(&m_stateLock);
+    return m_busVoltage;
+}
+
+double MqttFlightTelemetryService::busCurrent() const
+{
+    QReadLocker lock(&m_stateLock);
+    return m_busCurrent;
 }
 
 QVariantList MqttFlightTelemetryService::motorTemperatures() const
@@ -389,6 +424,23 @@ QVariantList MqttFlightTelemetryService::propulsionInverterHealthHistory() const
 void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
 {
     QWriteLocker lock(&m_stateLock);
+    QStringList validationErrors;
+
+    const auto replaceFixedValues = [&validationErrors](QVector<double> &target,
+                                                         const QVariantList &values,
+                                                         int expectedSize,
+                                                         const QString &fieldName) {
+        if (values.size() != expectedSize) {
+            validationErrors.append(QStringLiteral("%1 requires %2 values; received %3")
+                                    .arg(fieldName).arg(expectedSize).arg(values.size()));
+            return;
+        }
+        target.clear();
+        target.reserve(values.size());
+        for (const QVariant &value : values) {
+            target.append(value.toDouble());
+        }
+    };
 
     m_telemetry.setCas(payload.value(QStringLiteral("cas"), m_telemetry.cas()).toDouble());
     m_telemetry.setTas(payload.value(QStringLiteral("tas"), m_telemetry.tas()).toDouble());
@@ -407,6 +459,23 @@ void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
     if (payload.contains(QStringLiteral("batterySoc"))) {
         m_batterySoc = clamp(payload.value(QStringLiteral("batterySoc")).toDouble(), 0.0, 100.0);
     }
+    if (payload.contains(QStringLiteral("batterySoh"))) {
+        m_batterySoh = clamp(payload.value(QStringLiteral("batterySoh")).toDouble(), 0.0, 100.0);
+    }
+    if (payload.contains(QStringLiteral("powerConsumptionKw"))) {
+        m_powerConsumptionKw = qMax(0.0, payload.value(QStringLiteral("powerConsumptionKw")).toDouble());
+    }
+    if (payload.contains(QStringLiteral("busVoltage"))) {
+        m_busVoltage = qMax(0.0, payload.value(QStringLiteral("busVoltage")).toDouble());
+    }
+    if (payload.contains(QStringLiteral("busCurrent"))) {
+        m_busCurrent = qMax(0.0, payload.value(QStringLiteral("busCurrent")).toDouble());
+    }
+    if (payload.contains(QStringLiteral("batteryCellTemperatures"))) {
+        const QVariantList temperatures = payload.value(QStringLiteral("batteryCellTemperatures")).toList();
+        replaceFixedValues(m_batteryCellTemperatures, temperatures, 6,
+                           QStringLiteral("batteryCellTemperatures"));
+    }
     if (payload.contains(QStringLiteral("gpsLatitude"))) {
         m_gpsLatitude = payload.value(QStringLiteral("gpsLatitude")).toDouble();
     }
@@ -415,53 +484,40 @@ void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
     }
     if (payload.contains(QStringLiteral("motorTemps"))) {
         const QVariantList motorTemps = payload.value(QStringLiteral("motorTemps")).toList();
-        m_motorTemperatures.clear();
-        m_motorTemperatures.reserve(motorTemps.size());
-        for (const QVariant &value : motorTemps) {
-            m_motorTemperatures.append(value.toDouble());
-        }
+        replaceFixedValues(m_motorTemperatures, motorTemps, 4, QStringLiteral("motorTemps"));
     }
     if (payload.contains(QStringLiteral("motorRpms"))) {
         const QVariantList motorRpms = payload.value(QStringLiteral("motorRpms")).toList();
-        m_motorRpmValues.clear();
-        m_motorRpmValues.reserve(motorRpms.size());
-        for (const QVariant &value : motorRpms) {
-            m_motorRpmValues.append(value.toDouble());
-        }
+        replaceFixedValues(m_motorRpmValues, motorRpms, 4, QStringLiteral("motorRpms"));
     }
     if (payload.contains(QStringLiteral("tiltAngle"))) {
         m_tiltAngleDeg = clamp(payload.value(QStringLiteral("tiltAngle")).toDouble(), 0.0, 90.0);
     }
     if (payload.contains(QStringLiteral("thrustOutputs"))) {
         const QVariantList thrustOutputs = payload.value(QStringLiteral("thrustOutputs")).toList();
-        m_thrustOutputs.clear();
-        m_thrustOutputs.reserve(thrustOutputs.size());
-        for (const QVariant &value : thrustOutputs) {
-            m_thrustOutputs.append(value.toDouble());
-        }
+        replaceFixedValues(m_thrustOutputs, thrustOutputs, 2, QStringLiteral("thrustOutputs"));
     }
     if (payload.contains(QStringLiteral("inverterVoltages"))) {
         const QVariantList inverterVoltages = payload.value(QStringLiteral("inverterVoltages")).toList();
-        m_inverterVoltages.clear();
-        m_inverterVoltages.reserve(inverterVoltages.size());
-        for (const QVariant &value : inverterVoltages) {
-            m_inverterVoltages.append(value.toDouble());
-        }
+        replaceFixedValues(m_inverterVoltages, inverterVoltages, 4,
+                           QStringLiteral("inverterVoltages"));
     }
     if (payload.contains(QStringLiteral("inverterCurrents"))) {
         const QVariantList inverterCurrents = payload.value(QStringLiteral("inverterCurrents")).toList();
-        m_inverterCurrents.clear();
-        m_inverterCurrents.reserve(inverterCurrents.size());
-        for (const QVariant &value : inverterCurrents) {
-            m_inverterCurrents.append(value.toDouble());
-        }
+        replaceFixedValues(m_inverterCurrents, inverterCurrents, 4,
+                           QStringLiteral("inverterCurrents"));
     }
     if (payload.contains(QStringLiteral("inverterHealth"))) {
         const QVariantList inverterHealth = payload.value(QStringLiteral("inverterHealth")).toList();
-        m_inverterHealth.clear();
-        m_inverterHealth.reserve(inverterHealth.size());
-        for (const QVariant &value : inverterHealth) {
-            m_inverterHealth.append(clamp(value.toDouble(), 0.0, 100.0));
+        if (inverterHealth.size() == 4) {
+            m_inverterHealth.clear();
+            m_inverterHealth.reserve(inverterHealth.size());
+            for (const QVariant &value : inverterHealth) {
+                m_inverterHealth.append(clamp(value.toDouble(), 0.0, 100.0));
+            }
+        } else {
+            validationErrors.append(QStringLiteral("inverterHealth requires 4 values; received %1")
+                                    .arg(inverterHealth.size()));
         }
     }
 
@@ -503,6 +559,9 @@ void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
     }
 
     lock.unlock();
+    for (const QString &validationError : validationErrors) {
+        emit errorOccurred(validationError);
+    }
     emit telemetryChanged();
 }
 

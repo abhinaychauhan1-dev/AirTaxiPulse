@@ -7,6 +7,8 @@ import "features"
 ApplicationWindow {
     id: window
     visible: true
+    minimumWidth: 1024
+    minimumHeight: 680
     width: {
         var availableWidth = (window.screen && window.screen.availableGeometry)
             ? window.screen.availableGeometry.width
@@ -98,8 +100,8 @@ ApplicationWindow {
         spacing: 0
 
         Rectangle {
-            width: parent.width
-            height: 116
+            Layout.fillWidth: true
+            Layout.preferredHeight: 116
             color: "#0b1620"
             border.color: "#4b79a1"
             border.width: 1
@@ -234,8 +236,8 @@ ApplicationWindow {
 
                             Rectangle {
                                 Layout.alignment: Qt.AlignVCenter
-                                width: 8
-                                height: 8
+                                Layout.preferredWidth: 8
+                                Layout.preferredHeight: 8
                                 radius: 4
                                 color: mqttConnected ? "#7ee082" : (mqttAvailable ? "#ffb26f" : "#8a98a8")
                                 border.color: "#d8ebfa"
@@ -562,11 +564,10 @@ ApplicationWindow {
             color: "#16222a"
             border.color: "#4b79a1"
             border.width: 1
-            anchors.margins: 10
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
-            anchors.topMargin: 8
-            anchors.bottomMargin: 10
+            Layout.leftMargin: 10
+            Layout.rightMargin: 10
+            Layout.topMargin: 8
+            Layout.bottomMargin: 10
 
             ColumnLayout {
                 anchors.fill: parent
@@ -587,6 +588,7 @@ ApplicationWindow {
                             airTaxiModules.safety.title
                         ]
                         TabButton {
+                            id: moduleTab
                             text: modelData
                             checked: window.currentIndex === index
                             onClicked: window.currentIndex = index
@@ -600,13 +602,13 @@ ApplicationWindow {
                             background: Rectangle {
                                 anchors.fill: parent
                                 radius: 14
-                                color: checked ? "#3d6f94" : "#122238"
-                                border.color: checked ? "#81b6dc" : "#2f4961"
+                                color: moduleTab.checked ? "#3d6f94" : "#122238"
+                                border.color: moduleTab.checked ? "#81b6dc" : "#2f4961"
                                 border.width: 1
                             }
                             contentItem: Text {
-                                text: parent.text
-                                color: parent.checked ? "#ffffff" : "#d4e6f4"
+                                text: moduleTab.text
+                                color: moduleTab.checked ? "#ffffff" : "#d4e6f4"
                                 font.pixelSize: 11
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter

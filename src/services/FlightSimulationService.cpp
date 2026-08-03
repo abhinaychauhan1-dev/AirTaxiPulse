@@ -27,6 +27,11 @@ FlightSimulationService::FlightSimulationService(QObject *parent)
     , m_phase(0.0)
     , m_flightModeLabel(QStringLiteral("Pad Hover Hold"))
     , m_batterySoc(92.0)
+    , m_batterySoh(98.7)
+    , m_powerConsumptionKw(248.0)
+    , m_batteryCellTemperatures({34.2, 34.8, 35.1, 34.5, 35.4, 34.9})
+    , m_busVoltage(728.0)
+    , m_busCurrent(341.0)
     , m_motorTemperatures({62.0, 63.5, 61.8, 64.2})
     , m_motorRpmValues({420.0, 430.0, 418.0, 427.0})
     , m_tiltAngleDeg(84.0)
@@ -138,8 +143,7 @@ double FlightSimulationService::fpvProgress() const
 {
     const double pathError = wrappedAngleDeltaDegrees(m_telemetry.track(), m_telemetry.heading());
     const double verticalPenalty = qAbs(m_telemetry.vs()) / 2200.0;
-    const double normalizedPathQuality = clamp(1.0 - pathError / 18.0 - verticalPenalty * 0.25, 0.0, 1.0);
-    return mapToBand(normalizedPathQuality, 0.24, 0.66);
+    return clamp(1.0 - pathError / 18.0 - verticalPenalty * 0.25, 0.0, 1.0);
 }
 QString FlightSimulationService::flightModeLabel() const { return m_flightModeLabel; }
 QColor FlightSimulationService::vsAccentColor() const { return m_telemetry.vs() >= 0.0 ? QColor("#79d57a") : QColor("#e07c7c"); }
@@ -150,6 +154,11 @@ QString FlightSimulationService::vsValueText() const
     return sign + QString::number(qAbs(m_telemetry.vs()), 'f', 0) + QStringLiteral(" ft/min");
 }
 double FlightSimulationService::batterySoc() const { return m_batterySoc; }
+double FlightSimulationService::batterySoh() const { return m_batterySoh; }
+double FlightSimulationService::powerConsumptionKw() const { return m_powerConsumptionKw; }
+QVariantList FlightSimulationService::batteryCellTemperatures() const { return historyToVariantList(m_batteryCellTemperatures); }
+double FlightSimulationService::busVoltage() const { return m_busVoltage; }
+double FlightSimulationService::busCurrent() const { return m_busCurrent; }
 QVariantList FlightSimulationService::motorTemperatures() const { return historyToVariantList(m_motorTemperatures); }
 QVariantList FlightSimulationService::motorRpmValues() const { return historyToVariantList(m_motorRpmValues); }
 double FlightSimulationService::tiltAngleDeg() const { return m_tiltAngleDeg; }
@@ -217,6 +226,7 @@ void FlightSimulationService::updateSimulation()
     double targetInverterVoltage = 0.0;
     double targetInverterCurrent = 0.0;
     double targetInverterHealth = 0.0;
+    double targetPowerConsumptionKw = 0.0;
 
     if (cyclePosition < 8.0) {
         m_flightModeLabel = QStringLiteral("Pad Hover Hold");
@@ -237,6 +247,7 @@ void FlightSimulationService::updateSimulation()
         targetInverterVoltage = 730.0 + 3.5 * qSin(m_phase * 0.6);
         targetInverterCurrent = 86.0 + 4.5 * qSin(m_phase * 1.1);
         targetInverterHealth = 99.2;
+        targetPowerConsumptionKw = 250.0;
     } else if (cyclePosition < 16.0) {
         m_flightModeLabel = QStringLiteral("Lift-Off Climb");
         const double climbPhase = cyclePosition - 8.0;
@@ -257,6 +268,7 @@ void FlightSimulationService::updateSimulation()
         targetInverterVoltage = 724.0 + 4.0 * qSin(m_phase * 0.55);
         targetInverterCurrent = 164.0 + 15.0 * qSin(m_phase * 0.85);
         targetInverterHealth = 98.9;
+        targetPowerConsumptionKw = 480.0;
     } else if (cyclePosition < 24.0) {
         m_flightModeLabel = QStringLiteral("Transition to Cruise");
         const double transitionPhase = cyclePosition - 16.0;
@@ -277,6 +289,7 @@ void FlightSimulationService::updateSimulation()
         targetInverterVoltage = 718.0 + 4.5 * qSin(m_phase * 0.45);
         targetInverterCurrent = 214.0 + 16.0 * qSin(m_phase * 0.7);
         targetInverterHealth = 98.5;
+        targetPowerConsumptionKw = 620.0;
     } else if (cyclePosition < 33.0) {
         m_flightModeLabel = QStringLiteral("Cruise Corridor");
         targetCas = 128.0 + 8.0 * qSin(m_phase * 0.55) + 3.0 * qCos(m_phase * 1.3);
@@ -296,6 +309,7 @@ void FlightSimulationService::updateSimulation()
         targetInverterVoltage = 714.0 + 3.8 * qSin(m_phase * 0.35);
         targetInverterCurrent = 182.0 + 10.0 * qSin(m_phase * 0.6);
         targetInverterHealth = 98.4;
+        targetPowerConsumptionKw = 525.0;
     } else {
         m_flightModeLabel = QStringLiteral("Arrival Descent");
         const double approachPhase = cyclePosition - 33.0;
@@ -316,6 +330,7 @@ void FlightSimulationService::updateSimulation()
         targetInverterVoltage = 719.0 + 3.5 * qSin(m_phase * 0.4);
         targetInverterCurrent = 151.0 - approachPhase * 3.6 + 11.0 * qSin(m_phase * 0.8);
         targetInverterHealth = 98.6;
+        targetPowerConsumptionKw = 440.0 - approachPhase * 20.0;
     }
 
     auto approach = [](double current, double target, double maxStep) {
@@ -376,6 +391,19 @@ void FlightSimulationService::updateSimulation()
     }
 
     m_batterySoc = clamp(m_batterySoc - 0.015, 18.0, 100.0);
+    m_batterySoh = clamp(m_batterySoh - 0.00001, 0.0, 100.0);
+    m_powerConsumptionKw = approach(m_powerConsumptionKw,
+                                    targetPowerConsumptionKw + 8.0 * qSin(m_phase * 0.65), 24.0);
+    m_busVoltage = approach(m_busVoltage, targetInverterVoltage, 3.5);
+    m_busCurrent = approach(m_busCurrent,
+                            m_busVoltage > 1.0 ? m_powerConsumptionKw * 1000.0 / m_busVoltage : 0.0,
+                            34.0);
+    const double targetCellTemperature = 31.0 + m_powerConsumptionKw / 55.0;
+    for (int i = 0; i < m_batteryCellTemperatures.size(); ++i) {
+        const double cellOffset = 1.4 * qSin(m_phase * 0.31 + i * 0.83);
+        m_batteryCellTemperatures[i] = approach(m_batteryCellTemperatures[i],
+                                                targetCellTemperature + cellOffset, 0.35);
+    }
     const double thermalWave = 2.6 * qSin(m_phase * 0.52);
     for (int i = 0; i < m_motorTemperatures.size(); ++i) {
         const double phaseOffset = i * 0.4;

@@ -37,6 +37,7 @@ class PrimaryFlightViewModel : public QObject
     Q_PROPERTY(double powerConsumptionKw READ powerConsumptionKw NOTIFY telemetryChanged)
     Q_PROPERTY(double cellTemperatureMin READ cellTemperatureMin NOTIFY telemetryChanged)
     Q_PROPERTY(double cellTemperatureMax READ cellTemperatureMax NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList batteryCellTemperatures READ batteryCellTemperatures NOTIFY telemetryChanged)
     Q_PROPERTY(bool thermalRunawayWarning READ thermalRunawayWarning NOTIFY telemetryChanged)
     Q_PROPERTY(double busVoltage READ busVoltage NOTIFY telemetryChanged)
     Q_PROPERTY(double busCurrent READ busCurrent NOTIFY telemetryChanged)
@@ -93,6 +94,7 @@ public:
     double powerConsumptionKw() const;
     double cellTemperatureMin() const;
     double cellTemperatureMax() const;
+    QVariantList batteryCellTemperatures() const;
     bool thermalRunawayWarning() const;
     double busVoltage() const;
     double busCurrent() const;

@@ -31,6 +31,11 @@ public:
     virtual QString vsTrendLabel() const = 0;
     virtual QString vsValueText() const = 0;
     virtual double batterySoc() const = 0;
+    virtual double batterySoh() const = 0;
+    virtual double powerConsumptionKw() const = 0;
+    virtual QVariantList batteryCellTemperatures() const = 0;
+    virtual double busVoltage() const = 0;
+    virtual double busCurrent() const = 0;
     virtual QVariantList motorTemperatures() const = 0;
     virtual QVariantList motorRpmValues() const = 0;
     virtual double tiltAngleDeg() const = 0;

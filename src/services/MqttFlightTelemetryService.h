@@ -35,6 +35,11 @@ class MqttFlightTelemetryService : public QObject, public IFlightTelemetrySource
     Q_PROPERTY(QString vsTrendLabel READ vsTrendLabel NOTIFY telemetryChanged)
     Q_PROPERTY(QString vsValueText READ vsValueText NOTIFY telemetryChanged)
     Q_PROPERTY(double batterySoc READ batterySoc NOTIFY telemetryChanged)
+    Q_PROPERTY(double batterySoh READ batterySoh NOTIFY telemetryChanged)
+    Q_PROPERTY(double powerConsumptionKw READ powerConsumptionKw NOTIFY telemetryChanged)
+    Q_PROPERTY(QVariantList batteryCellTemperatures READ batteryCellTemperatures NOTIFY telemetryChanged)
+    Q_PROPERTY(double busVoltage READ busVoltage NOTIFY telemetryChanged)
+    Q_PROPERTY(double busCurrent READ busCurrent NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList motorTemperatures READ motorTemperatures NOTIFY telemetryChanged)
     Q_PROPERTY(QVariantList motorRpmValues READ motorRpmValues NOTIFY telemetryChanged)
     Q_PROPERTY(double tiltAngleDeg READ tiltAngleDeg NOTIFY telemetryChanged)
@@ -108,6 +113,11 @@ public:
     QString vsTrendLabel() const override;
     QString vsValueText() const override;
     double batterySoc() const override;
+    double batterySoh() const override;
+    double powerConsumptionKw() const override;
+    QVariantList batteryCellTemperatures() const override;
+    double busVoltage() const override;
+    double busCurrent() const override;
     QVariantList motorTemperatures() const override;
     QVariantList motorRpmValues() const override;
     double tiltAngleDeg() const override;
@@ -153,6 +163,11 @@ private:
     FlightTelemetryData m_telemetry;
     QString m_flightModeLabel;
     double m_batterySoc;
+    double m_batterySoh;
+    double m_powerConsumptionKw;
+    QVector<double> m_batteryCellTemperatures;
+    double m_busVoltage;
+    double m_busCurrent;
     QVector<double> m_motorTemperatures;
     QVector<double> m_motorRpmValues;
     double m_tiltAngleDeg;

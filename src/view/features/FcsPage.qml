@@ -139,6 +139,7 @@ Item {
         var a = Math.sin(latitudeDelta / 2) * Math.sin(latitudeDelta / 2)
                 + Math.cos(latitude * radians) * Math.cos(waypoint.latitude * radians)
                 * Math.sin(longitudeDelta / 2) * Math.sin(longitudeDelta / 2)
+        a = root.clamp(a, 0, 1)
         return 3440.065 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
     }
 

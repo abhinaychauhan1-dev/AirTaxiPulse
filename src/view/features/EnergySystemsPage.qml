@@ -16,6 +16,7 @@ Item {
     readonly property real powerKw: Number(root.energyModel.powerConsumptionKw)
     readonly property real minTemp: Number(root.energyModel.cellTemperatureMin)
     readonly property real maxTemp: Number(root.energyModel.cellTemperatureMax)
+    readonly property var cellTemperatures: root.energyModel.batteryCellTemperatures
     readonly property real busVoltage: Number(root.energyModel.busVoltage)
     readonly property real busCurrent: Number(root.energyModel.busCurrent)
     readonly property bool thermalWarning: root.energyModel.thermalRunawayWarning
@@ -35,8 +36,8 @@ Item {
                                             ? root.hoveredBusChannel : root.selectedBusChannel
 
     function zoneTemperature(index) {
-        return root.minTemp + (root.maxTemp - root.minTemp)
-                * (0.2 + 0.8 * Math.abs(Math.sin(index * 0.91)))
+        return index < root.cellTemperatures.length
+            ? Number(root.cellTemperatures[index]) : 0
     }
 
     function busChannelName(index) {

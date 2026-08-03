@@ -2,6 +2,7 @@
 #define MQTTTELEMETRYCLIENT_H
 
 #include <QObject>
+#include <QMap>
 #include <QQueue>
 #include <QVariantMap>
 
@@ -62,12 +63,14 @@ private slots:
 private:
     struct PendingPayload
     {
+        quint64 sequence;
         QString topicName;
         QByteArray message;
     };
 
     void enqueueForProcessing(const QByteArray &message, const QString &topicName);
     void scheduleNextParsers();
+    void completePayload(quint64 sequence, const QVariantMap &payload);
 
     static QVariantMap decodePayload(const QByteArray &message);
     static void appendPayloadLogLine(const QString &topicName, const QByteArray &message);
@@ -81,7 +84,10 @@ private:
     int m_maxPendingMessages;
     int m_activeParsers;
     quint64 m_droppedMessageCount;
+    quint64 m_nextSequence;
+    quint64 m_nextSequenceToPublish;
     QQueue<PendingPayload> m_pendingPayloads;
+    QMap<quint64, QVariantMap> m_completedPayloads;
 };
 
 #endif // MQTTTELEMETRYCLIENT_H

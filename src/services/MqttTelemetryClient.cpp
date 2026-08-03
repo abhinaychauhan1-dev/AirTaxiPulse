@@ -21,6 +21,8 @@ MqttTelemetryClient::MqttTelemetryClient(QObject *parent)
     , m_maxPendingMessages(128)
     , m_activeParsers(0)
     , m_droppedMessageCount(0)
+    , m_nextSequence(0)
+    , m_nextSequenceToPublish(0)
 {
     m_client.setHostname(m_host);
     m_client.setPort(m_port);
@@ -133,7 +135,8 @@ void MqttTelemetryClient::setMaxPendingMessages(int maxPendingMessages)
     }
     m_maxPendingMessages = normalized;
     while (m_pendingPayloads.size() > m_maxPendingMessages) {
-        m_pendingPayloads.dequeue();
+        const PendingPayload dropped = m_pendingPayloads.dequeue();
+        completePayload(dropped.sequence, {});
         ++m_droppedMessageCount;
     }
     emit processingConfigChanged();
@@ -198,12 +201,13 @@ void MqttTelemetryClient::handleMessageReceived(const QByteArray &message, const
 void MqttTelemetryClient::enqueueForProcessing(const QByteArray &message, const QString &topicName)
 {
     if (m_pendingPayloads.size() >= m_maxPendingMessages) {
-        m_pendingPayloads.dequeue();
+        const PendingPayload dropped = m_pendingPayloads.dequeue();
+        completePayload(dropped.sequence, {});
         ++m_droppedMessageCount;
         emit backlogStatsChanged();
     }
 
-    m_pendingPayloads.enqueue(PendingPayload{topicName, message});
+    m_pendingPayloads.enqueue(PendingPayload{m_nextSequence++, topicName, message});
     scheduleNextParsers();
 }
 
@@ -216,22 +220,29 @@ void MqttTelemetryClient::scheduleNextParsers()
         auto *watcher = new QFutureWatcher<QVariantMap>(this);
         connect(watcher, &QFutureWatcher<QVariantMap>::finished,
                 this,
-                [this, watcher]() {
+                [this, watcher, sequence = pending.sequence]() {
                     const QVariantMap decoded = watcher->result();
                     watcher->deleteLater();
                     --m_activeParsers;
 
-                    if (!decoded.isEmpty()) {
-                        // This lambda runs on this object's thread, so emitting to
-                        // QML-facing objects remains thread-safe.
-                        emit telemetryDecoded(decoded);
-                    }
+                    completePayload(sequence, decoded);
 
                     scheduleNextParsers();
                 });
         watcher->setFuture(QtConcurrent::run([message = pending.message]() {
             return decodePayload(message);
         }));
+    }
+}
+
+void MqttTelemetryClient::completePayload(quint64 sequence, const QVariantMap &payload)
+{
+    m_completedPayloads.insert(sequence, payload);
+    while (m_completedPayloads.contains(m_nextSequenceToPublish)) {
+        const QVariantMap nextPayload = m_completedPayloads.take(m_nextSequenceToPublish++);
+        if (!nextPayload.isEmpty()) {
+            emit telemetryDecoded(nextPayload);
+        }
     }
 }
 
@@ -246,27 +257,30 @@ QVariantMap MqttTelemetryClient::decodePayload(const QByteArray &message)
     const QJsonObject object = document.object();
     QVariantMap payload;
 
-    const auto readNumber = [&object](const QStringList &keys, double defaultValue = 0.0) {
+    const auto insertOptionalNumber = [&object, &payload](const QString &targetKey, const QStringList &keys) {
         for (const QString &key : keys) {
             const QJsonValue value = object.value(key);
             if (value.isDouble()) {
-                return value.toDouble();
+                payload.insert(targetKey, value.toDouble());
+                return;
             }
         }
-        return defaultValue;
     };
-
-    payload.insert(QStringLiteral("cas"), readNumber({QStringLiteral("cas")}));
-    payload.insert(QStringLiteral("tas"), readNumber({QStringLiteral("tas")}));
-    payload.insert(QStringLiteral("altBaro"), readNumber({QStringLiteral("altBaro"), QStringLiteral("alt_baro")}));
-    payload.insert(QStringLiteral("altRadar"), readNumber({QStringLiteral("altRadar"), QStringLiteral("alt_radar")}));
-    payload.insert(QStringLiteral("vs"), readNumber({QStringLiteral("vs")}));
-    payload.insert(QStringLiteral("pitch"), readNumber({QStringLiteral("pitch")}));
-    payload.insert(QStringLiteral("roll"), readNumber({QStringLiteral("roll")}));
-    payload.insert(QStringLiteral("yaw"), readNumber({QStringLiteral("yaw")}));
-    payload.insert(QStringLiteral("heading"), readNumber({QStringLiteral("heading")}));
-    payload.insert(QStringLiteral("track"), readNumber({QStringLiteral("track")}));
-    payload.insert(QStringLiteral("batterySoc"), readNumber({QStringLiteral("batterySoc"), QStringLiteral("battery_soc")}));
+    insertOptionalNumber(QStringLiteral("cas"), {QStringLiteral("cas")});
+    insertOptionalNumber(QStringLiteral("tas"), {QStringLiteral("tas")});
+    insertOptionalNumber(QStringLiteral("altBaro"), {QStringLiteral("altBaro"), QStringLiteral("alt_baro")});
+    insertOptionalNumber(QStringLiteral("altRadar"), {QStringLiteral("altRadar"), QStringLiteral("alt_radar")});
+    insertOptionalNumber(QStringLiteral("vs"), {QStringLiteral("vs")});
+    insertOptionalNumber(QStringLiteral("pitch"), {QStringLiteral("pitch")});
+    insertOptionalNumber(QStringLiteral("roll"), {QStringLiteral("roll")});
+    insertOptionalNumber(QStringLiteral("yaw"), {QStringLiteral("yaw")});
+    insertOptionalNumber(QStringLiteral("heading"), {QStringLiteral("heading")});
+    insertOptionalNumber(QStringLiteral("track"), {QStringLiteral("track")});
+    insertOptionalNumber(QStringLiteral("batterySoc"), {QStringLiteral("batterySoc"), QStringLiteral("battery_soc")});
+    insertOptionalNumber(QStringLiteral("batterySoh"), {QStringLiteral("batterySoh"), QStringLiteral("battery_soh")});
+    insertOptionalNumber(QStringLiteral("powerConsumptionKw"), {QStringLiteral("powerConsumptionKw"), QStringLiteral("power_consumption_kw")});
+    insertOptionalNumber(QStringLiteral("busVoltage"), {QStringLiteral("busVoltage"), QStringLiteral("bus_voltage")});
+    insertOptionalNumber(QStringLiteral("busCurrent"), {QStringLiteral("busCurrent"), QStringLiteral("bus_current")});
 
     const QJsonValue flightModeValue = object.value(QStringLiteral("flightMode"));
     if (flightModeValue.isString()) {
@@ -289,6 +303,22 @@ QVariantMap MqttTelemetryClient::decodePayload(const QByteArray &message)
     }
     if (!motorTemps.isEmpty()) {
         payload.insert(QStringLiteral("motorTemps"), motorTemps);
+    }
+
+    const QVariantList batteryCellTemperatures = [&object]() {
+        QVariantList values;
+        const QJsonValue primary = object.value(QStringLiteral("batteryCellTemperatures"));
+        const QJsonValue fallback = object.value(QStringLiteral("battery_cell_temperatures"));
+        const QJsonArray array = primary.isArray() ? primary.toArray() : fallback.toArray();
+        for (const QJsonValue &temperature : array) {
+            if (temperature.isDouble()) {
+                values.append(temperature.toDouble());
+            }
+        }
+        return values;
+    }();
+    if (!batteryCellTemperatures.isEmpty()) {
+        payload.insert(QStringLiteral("batteryCellTemperatures"), batteryCellTemperatures);
     }
 
     QVariantList motorRpms;
@@ -415,10 +445,10 @@ QVariantMap MqttTelemetryClient::decodePayload(const QByteArray &message)
     }
 
     if (!payload.contains(QStringLiteral("gpsLatitude"))) {
-        payload.insert(QStringLiteral("gpsLatitude"), readNumber({QStringLiteral("gpsLatitude"), QStringLiteral("gps_latitude")}));
+        insertOptionalNumber(QStringLiteral("gpsLatitude"), {QStringLiteral("gpsLatitude"), QStringLiteral("gps_latitude")});
     }
     if (!payload.contains(QStringLiteral("gpsLongitude"))) {
-        payload.insert(QStringLiteral("gpsLongitude"), readNumber({QStringLiteral("gpsLongitude"), QStringLiteral("gps_longitude")}));
+        insertOptionalNumber(QStringLiteral("gpsLongitude"), {QStringLiteral("gpsLongitude"), QStringLiteral("gps_longitude")});
     }
 
     return payload;
