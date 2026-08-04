@@ -21,78 +21,139 @@ Item {
     readonly property real instrumentHeight: Math.max(0,
         (instrumentGrid.height - root.panelSpacing) / 2)
     readonly property string selectedSummary: root.flightModel.instrumentSummary(root.selectedInstrument)
+    readonly property bool batteryCaution: Number(root.flightModel.batterySoc) < 30
+    readonly property bool verticalModeActive: Math.abs(Number(root.flightModel.vs)) > 120
+    readonly property color avionicsGreen: "#65f5a5"
+    readonly property color avionicsCyan: "#54d8ff"
+    readonly property color cautionAmber: "#ffc45c"
 
     function instrumentCode(index) {
         return ["SPD", "ALT", "V/S", "ATT", "HDG", "FPV"][index]
     }
 
-    implicitHeight: pageContent.implicitHeight + 8
+    implicitHeight: pageContent.implicitHeight + 12
+
+    Rectangle {
+        anchors.fill: parent
+        color: "#050a0d"
+        border.color: "#25333a"
+        border.width: 2
+
+        Repeater {
+            model: Math.max(0, Math.ceil(parent.height / 32))
+            Rectangle {
+                required property int index
+                x: 2
+                y: index * 32
+                width: parent.width - 4
+                height: 1
+                color: "#102027"
+                opacity: 0.32
+            }
+        }
+    }
 
     ColumnLayout {
         id: pageContent
         anchors.fill: parent
-        anchors.margins: 4
-        spacing: 5
+        anchors.margins: 7
+        spacing: 6
 
         RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 43
-            spacing: 8
+            Layout.preferredHeight: 48
+            spacing: 12
 
             ColumnLayout {
-                Layout.fillWidth: true
+                Layout.preferredWidth: 220
                 spacing: 0
 
                 Text {
-                    text: "Primary Flight & Navigation Data"
-                    color: "#f3f9fd"
-                    font.pixelSize: 18
+                    text: "PFD  /  VEHICLE 01"
+                    color: "#e8f7fc"
+                    font.pixelSize: 16
                     font.bold: true
                     Layout.fillWidth: true
                     Layout.minimumWidth: 0
                     elide: Text.ElideRight
                 }
                 Text {
-                    text: "Live aircraft state, navigation vectors and trajectory references"
-                    color: "#91aebe"
-                    font.pixelSize: 9
+                    text: "EVTOL FLIGHT DECK   •   SIM"
+                    color: "#66818d"
+                    font.pixelSize: 8
+                    font.letterSpacing: 1
                     Layout.fillWidth: true
                 }
             }
 
+            Rectangle { Layout.preferredWidth: 1; Layout.fillHeight: true; Layout.margins: 5; color: "#263941" }
+
             RowLayout {
+                Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
-                spacing: 12
+                spacing: 0
 
                 ColumnLayout {
+                    Layout.fillWidth: true
                     spacing: 0
-                    Label { text: "MODE"; color: "#6f8fa3"; font.pixelSize: 7 }
-                    Label { text: root.flightModel.flightModeLabel; color: "#77d9a6"; font.pixelSize: 10; font.bold: true }
+                    Label { text: "LATERAL"; color: "#627985"; font.pixelSize: 7; font.letterSpacing: 1 }
+                    Label { text: "NAV"; color: root.avionicsGreen; font.pixelSize: 12; font.bold: true }
                 }
                 ColumnLayout {
+                    Layout.fillWidth: true
                     spacing: 0
-                    Label { text: "MISSION TIME"; color: "#6f8fa3"; font.pixelSize: 7 }
-                    Label { text: root.missionTimeText; color: "#d7e9f4"; font.pixelSize: 10; font.bold: true }
+                    Label { text: "VERTICAL"; color: "#627985"; font.pixelSize: 7; font.letterSpacing: 1 }
+                    Label {
+                        text: root.verticalModeActive ? (Number(root.flightModel.vs) >= 0 ? "CLB" : "DES") : "ALT HOLD"
+                        color: root.avionicsGreen
+                        font.pixelSize: 12
+                        font.bold: true
+                    }
                 }
                 ColumnLayout {
+                    Layout.fillWidth: true
                     spacing: 0
-                    Label { text: "ELAPSED"; color: "#6f8fa3"; font.pixelSize: 7 }
-                    Label { text: root.missionEtaText; color: "#8bc8ec"; font.pixelSize: 10; font.bold: true }
+                    Label { text: "FLIGHT PHASE"; color: "#627985"; font.pixelSize: 7; font.letterSpacing: 1 }
+                    Label { text: root.flightModel.flightModeLabel.toUpperCase(); color: root.avionicsCyan; font.pixelSize: 12; font.bold: true }
                 }
+            }
+
+            Rectangle { Layout.preferredWidth: 1; Layout.fillHeight: true; Layout.margins: 5; color: "#263941" }
+
+            ColumnLayout {
+                Layout.preferredWidth: 112
+                spacing: 0
+                Label { text: "MISSION / ELAPSED"; color: "#627985"; font.pixelSize: 7; font.letterSpacing: 1 }
+                Label { text: root.missionTimeText + "  " + root.missionEtaText; color: "#d7e9f4"; font.pixelSize: 10; font.bold: true }
             }
         }
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 30
-            color: "#0d1c25"
-            border.color: "#29485b"
+            Layout.preferredHeight: 34
+            color: "#080f13"
+            border.color: "#32454d"
             border.width: 1
 
             RowLayout {
                 anchors.fill: parent
-                anchors.margins: 4
-                spacing: 4
+                anchors.leftMargin: 8
+                anchors.rightMargin: 8
+                spacing: 7
+
+                Rectangle { Layout.preferredWidth: 4; Layout.preferredHeight: 4; color: root.avionicsGreen }
+                Label { text: "FCS 1"; color: root.avionicsGreen; font.pixelSize: 9; font.bold: true }
+                Rectangle { Layout.preferredWidth: 4; Layout.preferredHeight: 4; color: root.avionicsGreen }
+                Label { text: "FCS 2"; color: root.avionicsGreen; font.pixelSize: 9; font.bold: true }
+                Label { text: "PROP ARMED"; color: root.avionicsGreen; font.pixelSize: 9; font.bold: true }
+                Label {
+                    text: root.batteryCaution ? "ENERGY LOW" : "ENERGY NORM"
+                    color: root.batteryCaution ? root.cautionAmber : root.avionicsGreen
+                    font.pixelSize: 9
+                    font.bold: true
+                }
+
+                Item { Layout.fillWidth: true }
 
                 Repeater {
                     model: 6
@@ -100,16 +161,16 @@ Item {
                     Rectangle {
                         id: selectorButton
                         required property int index
-                        Layout.preferredWidth: 42
-                        Layout.fillHeight: true
-                        color: root.selectedInstrument === selectorButton.index ? "#315f78" : "#132b38"
-                        border.color: root.selectedInstrument === selectorButton.index ? "#79cdec" : "#294858"
+                        Layout.preferredWidth: 38
+                        Layout.preferredHeight: 22
+                        color: root.selectedInstrument === selectorButton.index ? "#143642" : "transparent"
+                        border.color: root.selectedInstrument === selectorButton.index ? root.avionicsCyan : "#263941"
                         border.width: 1
 
                         Label {
                             anchors.centerIn: parent
                             text: root.instrumentCode(selectorButton.index)
-                            color: root.selectedInstrument === selectorButton.index ? "#f3fbff" : "#83a3b5"
+                            color: root.selectedInstrument === selectorButton.index ? root.avionicsCyan : "#718995"
                             font.pixelSize: 8
                             font.bold: true
                         }
@@ -122,15 +183,11 @@ Item {
                     }
                 }
 
-                Rectangle { Layout.preferredWidth: 1; Layout.fillHeight: true; Layout.margins: 3; color: "#294858" }
-
                 Label {
-                    Layout.fillWidth: true
-                    leftPadding: 6
+                    Layout.preferredWidth: 235
                     text: root.selectedSummary
-                    color: "#c7e0ee"
-                    font.pixelSize: 9
-                    font.bold: true
+                    color: "#829ba7"
+                    font.pixelSize: 8
                     elide: Text.ElideRight
                     verticalAlignment: Text.AlignVCenter
                 }

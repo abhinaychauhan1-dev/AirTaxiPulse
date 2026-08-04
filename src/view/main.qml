@@ -57,7 +57,7 @@ ApplicationWindow {
 
     Rectangle {
         anchors.fill: parent
-        color: "#1f2833"
+        color: "#05090c"
     }
 
     ColumnLayout {
@@ -66,23 +66,23 @@ ApplicationWindow {
 
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: 116
-            color: "#0b1620"
-            border.color: "#4b79a1"
+            Layout.preferredHeight: 96
+            color: "#080f13"
+            border.color: "#2c3b42"
             border.width: 1
 
             RowLayout {
                 anchors.fill: parent
-                anchors.margins: 10
-                spacing: 14
+                anchors.margins: 8
+                spacing: 12
 
                 Rectangle {
-                    Layout.preferredWidth: 165
-                    Layout.preferredHeight: 84
+                    Layout.preferredWidth: 154
+                    Layout.preferredHeight: 72
                     Layout.alignment: Qt.AlignVCenter
-                    radius: 10
-                    color: "#102131"
-                    border.color: "#2f4f67"
+                    radius: 2
+                    color: "#0b151a"
+                    border.color: "#304047"
                     border.width: 1
 
                     ColumnLayout {
@@ -155,33 +155,35 @@ ApplicationWindow {
                     Layout.alignment: Qt.AlignVCenter
                     spacing: 1
                     Label {
-                        text: qsTr("AIR TAXI OPERATIONS")
-                        color: "#78b6dd"
+                        text: qsTr("AIR TAXI  •  VEHICLE 01  •  SIMULATION")
+                        color: "#5ed8ff"
+                        font.pixelSize: 8
+                        font.bold: true
+                        font.letterSpacing: 1
+                    }
+                    Label {
+                        text: qsTr("eVTOL FLIGHT DECK")
+                        font.pixelSize: 21
+                        font.bold: true
+                        color: "#e8f7fc"
+                    }
+                    Label {
+                        text: qsTr("PRIMARY SYSTEMS / TELEMETRY / MISSION CONTROL")
+                        color: "#718892"
                         font.pixelSize: 9
-                        font.bold: true
-                    }
-                    Label {
-                        text: qsTr("Air Taxi eVTOL Pulse")
-                        font.pixelSize: 23
-                        font.bold: true
-                        color: "#ade8f4"
-                    }
-                    Label {
-                        text: qsTr("Real-time mission, safety, and route status overview")
-                        color: "#c8d8e4"
-                        font.pixelSize: 12
+                        font.letterSpacing: 1
                     }
                 }
 
                 Item { Layout.fillWidth: true }
 
                 Rectangle {
-                    Layout.preferredWidth: 340
-                    Layout.preferredHeight: 90
+                    Layout.preferredWidth: 328
+                    Layout.preferredHeight: 76
                     Layout.alignment: Qt.AlignVCenter
-                    radius: 10
-                    color: "#0f2436"
-                    border.color: mqttConnected ? "#70d28f" : "#4d6d88"
+                    radius: 2
+                    color: "#0a1419"
+                    border.color: mqttConnected ? "#65f5a5" : "#3b4d55"
                     border.width: 1
 
                     ColumnLayout {
@@ -352,12 +354,12 @@ ApplicationWindow {
 
                 Rectangle {
                     id: simPanel
-                    Layout.preferredWidth: 220
-                    Layout.preferredHeight: 84
+                    Layout.preferredWidth: 210
+                    Layout.preferredHeight: 72
                     Layout.alignment: Qt.AlignVCenter
-                    radius: 10
-                    color: window.simPanelHovered ? "#122a3d" : "#102131"
-                    border.color: window.simPanelHovered ? "#5f97bf" : "#2f4f67"
+                    radius: 2
+                    color: window.simPanelHovered ? "#10242c" : "#0a151a"
+                    border.color: window.simPanelHovered ? "#54d8ff" : "#304047"
                     border.width: 1
                     scale: window.simPanelHovered ? 1.02 : 1.0
 
@@ -526,13 +528,13 @@ ApplicationWindow {
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            color: "#16222a"
-            border.color: "#4b79a1"
+            color: "#070d10"
+            border.color: "#2c3b42"
             border.width: 1
-            Layout.leftMargin: 10
-            Layout.rightMargin: 10
-            Layout.topMargin: 8
-            Layout.bottomMargin: 10
+            Layout.leftMargin: 6
+            Layout.rightMargin: 6
+            Layout.topMargin: 6
+            Layout.bottomMargin: 6
 
             ColumnLayout {
                 anchors.fill: parent
@@ -540,9 +542,9 @@ ApplicationWindow {
 
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 6
-                    Layout.margins: 2
-                    Layout.minimumHeight: 50
+                    spacing: 2
+                    Layout.margins: 3
+                    Layout.minimumHeight: 42
 
                     Repeater {
                         model: [
@@ -563,18 +565,28 @@ ApplicationWindow {
                             Layout.minimumWidth: 136
                             Layout.maximumWidth: 250
                             Layout.alignment: Qt.AlignVCenter
-                            Layout.minimumHeight: 42
+                            Layout.minimumHeight: 36
                             background: Rectangle {
                                 anchors.fill: parent
-                                radius: 14
-                                color: moduleTab.checked ? "#3d6f94" : "#122238"
-                                border.color: moduleTab.checked ? "#81b6dc" : "#2f4961"
+                                radius: 1
+                                color: moduleTab.checked ? "#102d38" : "#091318"
+                                border.color: moduleTab.checked ? "#54d8ff" : "#27363d"
                                 border.width: 1
+
+                                Rectangle {
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.bottom: parent.bottom
+                                    height: 2
+                                    color: moduleTab.checked ? "#54d8ff" : "transparent"
+                                }
                             }
                             contentItem: Text {
                                 text: moduleTab.text
-                                color: moduleTab.checked ? "#ffffff" : "#d4e6f4"
-                                font.pixelSize: 11
+                                color: moduleTab.checked ? "#dff8ff" : "#81949d"
+                                font.pixelSize: 10
+                                font.bold: moduleTab.checked
+                                font.letterSpacing: 1
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                                 wrapMode: Text.WordWrap
