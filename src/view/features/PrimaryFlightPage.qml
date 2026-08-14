@@ -1,7 +1,18 @@
-﻿import QtQuick 2.15
+﻿/**
+ * @file    : src/view/features/PrimaryFlightPage.qml
+ * @brief   : Defines the primary flight telemetry overview page.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
+import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
+// This overview page summarizes live primary-flight telemetry for passengers.
 Item {
     id: root
     required property var flightModel
@@ -23,6 +34,7 @@ Item {
     property real track: flightModel.track
     implicitHeight: primaryContent.implicitHeight + 16
 
+    // The page content arranges mission context, flight status, and telemetry cards.
     ColumnLayout {
         id: primaryContent
         anchors.left: parent.left
@@ -31,6 +43,7 @@ Item {
         anchors.margins: 6
         spacing: 4
 
+        // The page header reports the current mission phase and timing.
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
@@ -96,6 +109,7 @@ Item {
             Layout.fillWidth: true
         }
 
+        // The flight-status strip highlights vertical motion and the active phase.
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 24
@@ -134,6 +148,7 @@ Item {
             }
         }
 
+        // The telemetry card grid groups speed, altitude, stability, and route metrics.
         GridLayout {
             id: cardGrid
             columns: cardColumns

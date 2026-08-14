@@ -1,9 +1,20 @@
+/**
+ * @file    : src/view/features/EnergySystemsPage.qml
+ * @brief   : Defines the detailed battery and power systems dashboard.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 pragma ComponentBehavior: Bound
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
+// This dashboard provides detailed battery, thermal, and power-distribution telemetry.
 Item {
     id: root
     required property var moduleRegistry
@@ -35,6 +46,7 @@ Item {
     readonly property int activeBusChannel: root.hoveredBusChannel >= 0
                                             ? root.hoveredBusChannel : root.selectedBusChannel
 
+    // These accessors adapt energy-system channel data for the dashboard controls.
     function zoneTemperature(index) {
         return root.energySystem.zoneTemperatures[index]
     }
@@ -55,6 +67,7 @@ Item {
         return root.energySystem.busChannelPowers[index]
     }
 
+    // The animation timer advances high-voltage bus flow indicators.
     Timer {
         interval: 40
         running: root.visible
@@ -64,11 +77,13 @@ Item {
         }
     }
 
+    // The page content arranges system status, metric selection, and energy panels.
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 4
         spacing: 5
 
+        // The page header summarizes battery-system identity and alert state.
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 43
@@ -105,6 +120,7 @@ Item {
             }
         }
 
+        // The metric selector focuses the corresponding dashboard panel.
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 30
@@ -144,6 +160,7 @@ Item {
             }
         }
 
+        // The dashboard groups charge, thermal, consumption, health, and bus telemetry.
         GridLayout {
             id: dashboard
             Layout.fillWidth: true
@@ -152,6 +169,7 @@ Item {
             columnSpacing: root.panelSpacing
             rowSpacing: root.panelSpacing
 
+            // The state-of-charge panel combines a radial gauge with pack occupancy.
             Rectangle {
                 Layout.row: 0
                 Layout.column: 0
@@ -187,6 +205,7 @@ Item {
                             Layout.preferredWidth: 154
                             Layout.fillHeight: true
 
+                            // The charge gauge renders usable battery capacity as a radial arc.
                             Canvas {
                                 id: socGauge
                                 anchors.centerIn: parent
@@ -260,6 +279,7 @@ Item {
                 }
             }
 
+            // The thermal panel maps module temperatures and cooling-flow boundaries.
             Rectangle {
                 Layout.row: 0
                 Layout.column: 1
@@ -292,6 +312,7 @@ Item {
                         Layout.fillHeight: true
                         clip: true
 
+                        // The thermal-flow canvas outlines the battery cooling circuit.
                         Canvas {
                             id: thermalFlow
                             anchors.top: parent.top
@@ -458,6 +479,7 @@ Item {
                 }
             }
 
+            // The consumption panel compares hover and cruise power demand.
             Rectangle {
                 Layout.row: 1
                 Layout.column: 0
@@ -542,6 +564,7 @@ Item {
                 }
             }
 
+            // The health and bus panel combines degradation status with channel distribution.
             Rectangle {
                 Layout.row: 1
                 Layout.column: 1
@@ -615,6 +638,7 @@ Item {
                                 }
                             }
 
+                            // The bus network visualizes animated power flow across selectable channels.
                             Item {
                                 id: busNetwork
                                 Layout.fillWidth: true

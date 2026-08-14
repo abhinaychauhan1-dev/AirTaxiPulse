@@ -1,7 +1,21 @@
+/**
+ * @file    : src/viewmodel/AirTaxiModuleRegistry.cpp
+ * @brief   : Implements registration and wiring for application view models.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 #include "AirTaxiModuleRegistry.h"
 
 #include <QPair>
 
+/// @brief Creates feature cards from title/subtitle pairs and assigns Qt ownership.
+/// @param parent QObject that owns the created cards.
+/// @param items Card title and subtitle pairs.
+/// @return List of newly allocated card objects.
 static QList<FeatureOverviewCardData*> makeCards(QObject *parent, const QList<QPair<QString, QString>> &items)
 {
     QList<FeatureOverviewCardData*> cards;
@@ -12,6 +26,8 @@ static QList<FeatureOverviewCardData*> makeCards(QObject *parent, const QList<QP
     return cards;
 }
 
+/// @brief Builds the default module graph around an owned simulation source.
+/// @param parent Optional QObject parent for Qt ownership.
 AirTaxiModuleRegistry::AirTaxiModuleRegistry(QObject *parent)
     : QObject(parent)
     , m_ownedFlightSimulation(std::make_unique<FlightSimulationService>(this))
@@ -64,6 +80,7 @@ AirTaxiModuleRegistry::AirTaxiModuleRegistry(QObject *parent)
           }),
           this)
 {
+    // Fan out source updates to each telemetry-backed QML view model.
     QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
                      &m_primaryFlight, SIGNAL(telemetryChanged()));
     QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
@@ -80,6 +97,10 @@ AirTaxiModuleRegistry::AirTaxiModuleRegistry(QObject *parent)
                      &m_safetySystem, SIGNAL(stateChanged()));
 }
 
+/// @brief Builds the module graph around a caller-provided telemetry source.
+/// @param telemetrySource Source that supplies aircraft telemetry values.
+/// @param telemetryNotifier QObject that emits the telemetryChanged() signal.
+/// @param parent Optional QObject parent for Qt ownership.
 AirTaxiModuleRegistry::AirTaxiModuleRegistry(IFlightTelemetrySource &telemetrySource,
                                              QObject &telemetryNotifier,
                                              QObject *parent)
@@ -134,6 +155,7 @@ AirTaxiModuleRegistry::AirTaxiModuleRegistry(IFlightTelemetrySource &telemetrySo
           }),
           this)
 {
+    // Fan out external source updates to each telemetry-backed QML view model.
     QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
                      &m_primaryFlight, SIGNAL(telemetryChanged()));
     QObject::connect(m_telemetryNotifier, SIGNAL(telemetryChanged()),
@@ -150,51 +172,71 @@ AirTaxiModuleRegistry::AirTaxiModuleRegistry(IFlightTelemetrySource &telemetrySo
                      &m_safetySystem, SIGNAL(stateChanged()));
 }
 
+/// @brief Returns the primary flight telemetry view model.
+/// @return Registry-owned primary flight view model.
 PrimaryFlightViewModel *AirTaxiModuleRegistry::primaryFlight() const
 {
     return const_cast<PrimaryFlightViewModel *>(&m_primaryFlight);
 }
 
+/// @brief Returns the propulsion feature overview.
+/// @return Registry-owned propulsion overview.
 FeatureOverviewViewModel *AirTaxiModuleRegistry::propulsion() const
 {
     return const_cast<FeatureOverviewViewModel *>(&m_propulsion);
 }
 
+/// @brief Returns the energy feature overview.
+/// @return Registry-owned energy overview.
 FeatureOverviewViewModel *AirTaxiModuleRegistry::energy() const
 {
     return const_cast<FeatureOverviewViewModel *>(&m_energy);
 }
 
+/// @brief Returns the flight-control-system feature overview.
+/// @return Registry-owned flight-control overview.
 FeatureOverviewViewModel *AirTaxiModuleRegistry::fcs() const
 {
     return const_cast<FeatureOverviewViewModel *>(&m_fcs);
 }
 
+/// @brief Returns the safety feature overview.
+/// @return Registry-owned safety overview.
 FeatureOverviewViewModel *AirTaxiModuleRegistry::safety() const
 {
     return const_cast<FeatureOverviewViewModel *>(&m_safety);
 }
 
+/// @brief Returns the flight session view model.
+/// @return Registry-owned session view model.
 FlightSessionViewModel *AirTaxiModuleRegistry::session() const
 {
     return const_cast<FlightSessionViewModel *>(&m_session);
 }
 
+/// @brief Returns the propulsion subsystem view model.
+/// @return Registry-owned propulsion view model.
 PropulsionSystemViewModel *AirTaxiModuleRegistry::propulsionSystem() const
 {
     return const_cast<PropulsionSystemViewModel *>(&m_propulsionSystem);
 }
 
+/// @brief Returns the energy subsystem view model.
+/// @return Registry-owned energy view model.
 EnergySystemViewModel *AirTaxiModuleRegistry::energySystem() const
 {
     return const_cast<EnergySystemViewModel *>(&m_energySystem);
 }
 
+/// @brief Returns the flight-control-system view model.
+/// @return Registry-owned flight-control view model.
 FlightControlSystemViewModel *AirTaxiModuleRegistry::flightControlSystem() const
 {
     return const_cast<FlightControlSystemViewModel *>(&m_flightControlSystem);
 }
 
+/// @brief Returns the safety subsystem view model.
+/// @return Registry-owned safety view model.
 SafetySystemViewModel *AirTaxiModuleRegistry::safetySystem() const
 {
     return const_cast<SafetySystemViewModel *>(&m_safetySystem);

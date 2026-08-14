@@ -1,9 +1,20 @@
+/**
+ * @file    : src/view/main.qml
+ * @brief   : Defines the main application window and feature navigation.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Window 2.15
 import "features"
 
+// The application window owns global telemetry status and feature navigation.
 ApplicationWindow {
     id: window
     visible: true
@@ -42,6 +53,7 @@ ApplicationWindow {
     readonly property string currentTimeText: airTaxiModules.session.currentTimeText
     readonly property string elapsedText: airTaxiModules.session.elapsedText
 
+    // The header animation timer advances the simulated trajectory display.
     Timer {
         interval: 60
         running: true
@@ -60,10 +72,12 @@ ApplicationWindow {
         color: "#05090c"
     }
 
+    // The primary shell arranges the flight-deck header above the active feature page.
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
 
+        // The header presents mission timing, telemetry health, and simulation status.
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 96
@@ -352,6 +366,7 @@ ApplicationWindow {
                     }
                 }
 
+                // The simulation panel visualizes the current speed and altitude trajectory.
                 Rectangle {
                     id: simPanel
                     Layout.preferredWidth: 210
@@ -525,6 +540,7 @@ ApplicationWindow {
             }
         }
 
+        // The feature workspace contains module navigation and the selected dashboard.
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -540,6 +556,7 @@ ApplicationWindow {
                 anchors.fill: parent
                 spacing: 1
 
+                // The module tab strip switches between the operational dashboards.
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 2
@@ -597,6 +614,7 @@ ApplicationWindow {
                     }
                 }
 
+                // The page stack hosts the five primary flight-system views.
                 StackLayout {
                     id: pageStack
                     Layout.fillWidth: true

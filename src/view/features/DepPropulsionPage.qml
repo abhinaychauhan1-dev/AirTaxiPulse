@@ -1,9 +1,20 @@
+/**
+ * @file    : src/view/features/DepPropulsionPage.qml
+ * @brief   : Defines the detailed distributed electric propulsion dashboard.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 pragma ComponentBehavior: Bound
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
+// This dashboard provides detailed distributed electric propulsion telemetry.
 Item {
     id: root
     required property var moduleRegistry
@@ -40,6 +51,7 @@ Item {
     readonly property string propulsionState: root.propulsionModel.stateLabel
     readonly property color stateColor: root.propulsionState === "ALL CHANNELS NOMINAL" ? "#69d6a0" : "#ff9f72"
 
+    // The animation timer advances rotor motion and electrical-flow pulses.
     Timer {
         interval: 32
         running: root.visible
@@ -53,12 +65,14 @@ Item {
 
     implicitHeight: propulsionContent.implicitHeight + root.pageMargin * 2
 
+    // The page content arranges the propulsion heading and four operational panels.
     ColumnLayout {
         id: propulsionContent
         anchors.fill: parent
         anchors.margins: root.pageMargin
         spacing: root.panelSpacing
 
+        // The page header presents module identity and aggregate propulsion state.
         GridLayout {
             id: pageHeader
             Layout.fillWidth: true
@@ -105,6 +119,7 @@ Item {
             }
         }
 
+        // The dashboard grid groups propulsion mapping, thermal control, thrust, and inverters.
         GridLayout {
             id: dashboardGrid
             Layout.fillWidth: true
@@ -113,6 +128,7 @@ Item {
             columnSpacing: root.panelSpacing
             rowSpacing: root.panelSpacing
 
+            // The propulsion map visualizes motor placement and high-voltage power flow.
             Rectangle {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
@@ -139,6 +155,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
 
+                        // The power-network canvas draws animated distribution paths to each motor.
                         Canvas {
                             id: powerNetwork
                             anchors.fill: parent
@@ -262,6 +279,7 @@ Item {
                 }
             }
 
+            // The vector and thermal panel tracks nacelle angle and motor temperatures.
             Rectangle {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
@@ -390,6 +408,7 @@ Item {
                 }
             }
 
+            // The thrust-allocation panel compares front and rear rotor groups.
             Rectangle {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
@@ -468,6 +487,7 @@ Item {
                 }
             }
 
+            // The inverter-control panel reports channel loading and electrical health.
             Rectangle {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0

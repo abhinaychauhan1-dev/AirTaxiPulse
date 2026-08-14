@@ -1,10 +1,22 @@
+/**
+ * @file    : src/view/features/EnergyPage.qml
+ * @brief   : Defines the energy subsystem overview page.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
+// This overview page presents the energy module summary and feature cards.
 Item {
     required property var moduleRegistry
 
+    // The page content combines the module heading with its card collection.
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 24
@@ -24,6 +36,7 @@ Item {
             color: "#d7e3ef"
         }
 
+        // The feature-card region lays out the available energy capabilities.
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true

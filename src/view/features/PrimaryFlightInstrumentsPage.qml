@@ -1,9 +1,20 @@
+/**
+ * @file    : src/view/features/PrimaryFlightInstrumentsPage.qml
+ * @brief   : Defines the primary flight instrument display page.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 pragma ComponentBehavior: Bound
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
+// This page presents the primary flight display as six interactive instruments.
 Item {
     id: root
     required property var flightModel
@@ -27,6 +38,7 @@ Item {
     readonly property color avionicsCyan: "#54d8ff"
     readonly property color cautionAmber: "#ffc45c"
 
+    // This helper maps instrument indexes to selector labels.
     function instrumentCode(index) {
         return ["SPD", "ALT", "V/S", "ATT", "HDG", "FPV"][index]
     }
@@ -53,12 +65,14 @@ Item {
         }
     }
 
+    // The page content arranges flight modes, system status, and the instrument grid.
     ColumnLayout {
         id: pageContent
         anchors.fill: parent
         anchors.margins: 7
         spacing: 6
 
+        // The page header reports active guidance modes and mission timing.
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 48
@@ -128,6 +142,7 @@ Item {
             }
         }
 
+        // The status strip combines system health with instrument selection.
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 34
@@ -194,6 +209,7 @@ Item {
             }
         }
 
+        // The instrument grid provides speed, altitude, vertical, attitude, heading, and path views.
         GridLayout {
             id: instrumentGrid
             Layout.fillWidth: true
@@ -202,6 +218,7 @@ Item {
             columnSpacing: root.panelSpacing
             rowSpacing: root.panelSpacing
 
+            // The airspeed panel combines a calibrated-speed tape with true airspeed context.
             Rectangle {
                 id: airspeedPanel
                 Layout.row: 0
@@ -336,6 +353,7 @@ Item {
                 }
             }
 
+            // The altitude panel combines barometric and radar-altitude indications.
             Rectangle {
                 id: altitudePanel
                 Layout.row: 0
@@ -464,6 +482,7 @@ Item {
                 }
             }
 
+            // The vertical-speed panel visualizes climb or descent rate and trend.
             Rectangle {
                 id: verticalSpeedPanel
                 Layout.row: 0
@@ -569,6 +588,7 @@ Item {
                 }
             }
 
+            // The attitude panel renders pitch, roll, yaw, and slip indications.
             Rectangle {
                 id: attitudePanel
                 Layout.row: 1
@@ -679,6 +699,7 @@ Item {
                 }
             }
 
+            // The heading panel compares magnetic heading with the current track.
             Rectangle {
                 id: headingPanel
                 Layout.row: 1
@@ -722,6 +743,7 @@ Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
 
+                        // The compass canvas draws heading ticks and the relative track marker.
                         Canvas {
                             id: compassCanvas
                             anchors.fill: parent
@@ -791,6 +813,7 @@ Item {
                 }
             }
 
+            // The flight-path panel visualizes trajectory and velocity-vector displacement.
             Rectangle {
                 id: fpvPanel
                 Layout.row: 1

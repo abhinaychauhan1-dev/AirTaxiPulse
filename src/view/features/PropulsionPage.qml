@@ -1,9 +1,20 @@
+/**
+ * @file    : src/view/features/PropulsionPage.qml
+ * @brief   : Defines the propulsion system overview page.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 pragma ComponentBehavior: Bound
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
+// This overview page summarizes distributed propulsion performance and health.
 Item {
     id: root
     required property var moduleRegistry
@@ -26,6 +37,7 @@ Item {
     readonly property real averageRpm: root.propulsionModel.averageRpm
     readonly property string propulsionState: root.propulsionModel.stateLabel
 
+    // The animation timer advances the rotor visualization while the page is visible.
     Timer {
         interval: 40
         running: root.visible
@@ -37,6 +49,7 @@ Item {
 
     implicitHeight: propulsionContent.implicitHeight + 16
 
+    // The page content combines propulsion status, the powertrain summary, and metric cards.
     ColumnLayout {
         id: propulsionContent
         anchors.left: parent.left
@@ -75,6 +88,7 @@ Item {
             Layout.fillWidth: true
         }
 
+        // The powertrain summary presents total thrust, rotor state, and nacelle health.
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 112
@@ -183,6 +197,7 @@ Item {
             }
         }
 
+        // The propulsion card grid exposes detailed motor and inverter telemetry.
         GridLayout {
             id: cardGrid
             columns: root.cardColumns

@@ -1,3 +1,13 @@
+/**
+ * @file    : src/services/MqttFlightTelemetryService.cpp
+ * @brief   : Implements the MQTT-backed flight telemetry service.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 #include "MqttFlightTelemetryService.h"
 
 #include <QStringList>
@@ -5,12 +15,15 @@
 #include <cmath>
 
 namespace {
+/// @brief Constrains a normalized value to the range 0.0 to 1.0.
 double unitClamp(double value)
 {
     return qMax(0.0, qMin(1.0, value));
 }
 }
 
+/// @brief Constructs the service and connects MQTT client notifications.
+/// @param parent Optional QObject that owns the service.
 MqttFlightTelemetryService::MqttFlightTelemetryService(QObject *parent)
     : QObject(parent)
     , m_client(this)
@@ -32,6 +45,7 @@ MqttFlightTelemetryService::MqttFlightTelemetryService(QObject *parent)
     , m_gpsLatitude(0.0)
     , m_gpsLongitude(0.0)
 {
+    // Forward client state and deliver decoded payloads on the service thread.
     connect(&m_client, &MqttTelemetryClient::telemetryDecoded,
             this, &MqttFlightTelemetryService::onTelemetryDecoded,
             Qt::QueuedConnection);
@@ -46,6 +60,7 @@ MqttFlightTelemetryService::MqttFlightTelemetryService(QObject *parent)
     connect(&m_client, &MqttTelemetryClient::errorOccurred,
             this, &MqttFlightTelemetryService::errorOccurred);
 
+        // Seed each bounded history so QML receives a valid initial series.
     appendHistory(m_casHistory, m_telemetry.cas());
     appendHistory(m_altHistory, m_telemetry.altBaro());
     appendHistory(m_vsHistory, m_telemetry.vs());
@@ -59,172 +74,211 @@ MqttFlightTelemetryService::MqttFlightTelemetryService(QObject *parent)
     appendHistory(m_propulsionInverterHealthHistory, 0.0);
 }
 
+/// @brief Returns the service-owned telemetry object exposed to QML.
+/// @return Mutable pointer to the current telemetry data.
 FlightTelemetryData *MqttFlightTelemetryService::telemetry() const
 {
     return const_cast<FlightTelemetryData *>(&m_telemetry);
 }
 
+/// @brief Returns the configured MQTT broker host.
 QString MqttFlightTelemetryService::brokerHost() const
 {
     return m_client.host();
 }
 
+/// @brief Forwards a broker host update to the MQTT client.
+/// @param host Broker hostname or IP address.
 void MqttFlightTelemetryService::setBrokerHost(const QString &host)
 {
     m_client.setHost(host);
 }
 
+/// @brief Returns the configured MQTT broker port.
 quint16 MqttFlightTelemetryService::brokerPort() const
 {
     return m_client.port();
 }
 
+/// @brief Forwards a broker port update to the MQTT client.
+/// @param port MQTT broker port.
 void MqttFlightTelemetryService::setBrokerPort(quint16 port)
 {
     m_client.setPort(port);
 }
 
+/// @brief Returns the configured telemetry topic filter.
 QString MqttFlightTelemetryService::topicFilter() const
 {
     return m_client.topicFilter();
 }
 
+/// @brief Forwards a topic-filter update to the MQTT client.
+/// @param topicFilter MQTT subscription filter.
 void MqttFlightTelemetryService::setTopicFilter(const QString &topicFilter)
 {
     m_client.setTopicFilter(topicFilter);
 }
 
+/// @brief Returns whether asynchronous raw payload logging is enabled.
 bool MqttFlightTelemetryService::asyncPayloadLoggingEnabled() const
 {
     return m_client.asyncPayloadLoggingEnabled();
 }
 
+/// @brief Enables or disables asynchronous raw payload logging.
+/// @param enabled true to log received MQTT payloads.
 void MqttFlightTelemetryService::setAsyncPayloadLoggingEnabled(bool enabled)
 {
     m_client.setAsyncPayloadLoggingEnabled(enabled);
 }
 
+/// @brief Returns the maximum number of simultaneous parser tasks.
 int MqttFlightTelemetryService::maxConcurrentParsers() const
 {
     return m_client.maxConcurrentParsers();
 }
 
+/// @brief Forwards the parser concurrency limit to the MQTT client.
+/// @param maxConcurrentParsers Requested parser count.
 void MqttFlightTelemetryService::setMaxConcurrentParsers(int maxConcurrentParsers)
 {
     m_client.setMaxConcurrentParsers(maxConcurrentParsers);
 }
 
+/// @brief Returns the maximum number of queued payloads.
 int MqttFlightTelemetryService::maxPendingMessages() const
 {
     return m_client.maxPendingMessages();
 }
 
+/// @brief Forwards the pending-message capacity to the MQTT client.
+/// @param maxPendingMessages Requested backlog capacity.
 void MqttFlightTelemetryService::setMaxPendingMessages(int maxPendingMessages)
 {
     m_client.setMaxPendingMessages(maxPendingMessages);
 }
 
+/// @brief Decreases parser concurrency by one down to the supported minimum.
 void MqttFlightTelemetryService::decreaseParserConcurrency()
 {
     setMaxConcurrentParsers(qMax(1, maxConcurrentParsers() - 1));
 }
 
+/// @brief Increases parser concurrency by one up to the UI-supported maximum.
 void MqttFlightTelemetryService::increaseParserConcurrency()
 {
     setMaxConcurrentParsers(qMin(16, maxConcurrentParsers() + 1));
 }
 
+/// @brief Increases pending capacity by 32 up to the UI-supported maximum.
 void MqttFlightTelemetryService::increasePendingCapacity()
 {
     setMaxPendingMessages(qMin(4096, maxPendingMessages() + 32));
 }
 
+/// @brief Returns the cumulative number of payloads dropped from the backlog.
 quint64 MqttFlightTelemetryService::droppedMessageCount() const
 {
     return m_client.droppedMessageCount();
 }
 
+/// @brief Returns whether the MQTT broker connection is established.
 bool MqttFlightTelemetryService::connected() const
 {
     return m_client.connected();
 }
 
+/// @brief Starts a connection to the configured MQTT broker.
 void MqttFlightTelemetryService::connectToBroker()
 {
     m_client.connectToBroker();
 }
 
+/// @brief Disconnects from the MQTT broker.
 void MqttFlightTelemetryService::disconnectFromBroker()
 {
     m_client.disconnectFromBroker();
 }
 
+/// @brief Returns calibrated airspeed under the state read lock.
 double MqttFlightTelemetryService::cas() const
 {
     QReadLocker lock(&m_stateLock);
     return m_telemetry.cas();
 }
 
+/// @brief Returns true airspeed under the state read lock.
 double MqttFlightTelemetryService::tas() const
 {
     QReadLocker lock(&m_stateLock);
     return m_telemetry.tas();
 }
 
+/// @brief Returns barometric altitude under the state read lock.
 double MqttFlightTelemetryService::altBaro() const
 {
     QReadLocker lock(&m_stateLock);
     return m_telemetry.altBaro();
 }
 
+/// @brief Returns radar altitude under the state read lock.
 double MqttFlightTelemetryService::altRadar() const
 {
     QReadLocker lock(&m_stateLock);
     return m_telemetry.altRadar();
 }
 
+/// @brief Returns vertical speed under the state read lock.
 double MqttFlightTelemetryService::vs() const
 {
     QReadLocker lock(&m_stateLock);
     return m_telemetry.vs();
 }
 
+/// @brief Returns pitch under the state read lock.
 double MqttFlightTelemetryService::pitch() const
 {
     QReadLocker lock(&m_stateLock);
     return m_telemetry.pitch();
 }
 
+/// @brief Returns roll under the state read lock.
 double MqttFlightTelemetryService::roll() const
 {
     QReadLocker lock(&m_stateLock);
     return m_telemetry.roll();
 }
 
+/// @brief Returns yaw under the state read lock.
 double MqttFlightTelemetryService::yaw() const
 {
     QReadLocker lock(&m_stateLock);
     return m_telemetry.yaw();
 }
 
+/// @brief Returns heading under the state read lock.
 double MqttFlightTelemetryService::heading() const
 {
     QReadLocker lock(&m_stateLock);
     return m_telemetry.heading();
 }
 
+/// @brief Returns ground track under the state read lock.
 double MqttFlightTelemetryService::track() const
 {
     QReadLocker lock(&m_stateLock);
     return m_telemetry.track();
 }
 
+/// @brief Returns calibrated-airspeed progress mapped to the display band.
 double MqttFlightTelemetryService::casProgress() const
 {
     const double normalizedSpeed = clamp((cas() - 20.0) / 130.0, 0.0, 1.0);
     return mapToBand(normalizedSpeed, 0.38, 0.78);
 }
 
+/// @brief Returns blended-altitude progress mapped to the display band.
 double MqttFlightTelemetryService::altProgress() const
 {
     const double blendedAltitude = altBaro() * 0.82 + altRadar() * 0.18;
@@ -232,12 +286,14 @@ double MqttFlightTelemetryService::altProgress() const
     return mapToBand(normalizedAltitude, 0.55, 0.92);
 }
 
+/// @brief Returns vertical-speed progress mapped to the display band.
 double MqttFlightTelemetryService::vsProgress() const
 {
     const double normalizedVerticalSpeed = clamp(qAbs(vs()) / 1600.0, 0.0, 1.0);
     return mapToBand(normalizedVerticalSpeed, 0.18, 0.88);
 }
 
+/// @brief Returns attitude-stability progress mapped to the display band.
 double MqttFlightTelemetryService::attitudeProgress() const
 {
     const double attitudeLoad = qAbs(pitch()) * 0.7 + qAbs(roll()) * 0.45;
@@ -245,12 +301,14 @@ double MqttFlightTelemetryService::attitudeProgress() const
     return mapToBand(normalizedStability, 0.32, 0.82);
 }
 
+/// @brief Returns heading-derived progress mapped to the display band.
 double MqttFlightTelemetryService::headingProgress() const
 {
     const double headingWave = 0.5 + 0.5 * qSin(qDegreesToRadians(heading() * 1.8));
     return mapToBand(headingWave, 0.30, 0.70);
 }
 
+/// @brief Returns flight-path-vector alignment progress.
 double MqttFlightTelemetryService::fpvProgress() const
 {
     const double pathError = wrappedAngleDeltaDegrees(track(), heading());
@@ -258,189 +316,222 @@ double MqttFlightTelemetryService::fpvProgress() const
     return clamp(1.0 - pathError / 18.0 - verticalPenalty * 0.25, 0.0, 1.0);
 }
 
+/// @brief Returns the current flight mode label.
 QString MqttFlightTelemetryService::flightModeLabel() const
 {
     QReadLocker lock(&m_stateLock);
     return m_flightModeLabel;
 }
 
+/// @brief Returns the vertical-speed status color.
 QColor MqttFlightTelemetryService::vsAccentColor() const
 {
     return vs() >= 0.0 ? QColor("#79d57a") : QColor("#e07c7c");
 }
 
+/// @brief Returns the vertical-speed trend label.
 QString MqttFlightTelemetryService::vsTrendLabel() const
 {
     return vs() >= 0.0 ? QStringLiteral("Ascending") : QStringLiteral("Descending");
 }
 
+/// @brief Returns signed vertical-speed text with units.
 QString MqttFlightTelemetryService::vsValueText() const
 {
     const QString sign = vs() >= 0.0 ? QStringLiteral("+") : QStringLiteral("-");
     return sign + QString::number(qAbs(vs()), 'f', 0) + QStringLiteral(" ft/min");
 }
 
+/// @brief Returns battery state of charge under the state read lock.
 double MqttFlightTelemetryService::batterySoc() const
 {
     QReadLocker lock(&m_stateLock);
     return m_batterySoc;
 }
 
+/// @brief Returns battery state of health under the state read lock.
 double MqttFlightTelemetryService::batterySoh() const
 {
     QReadLocker lock(&m_stateLock);
     return m_batterySoh;
 }
 
+/// @brief Returns power consumption under the state read lock.
 double MqttFlightTelemetryService::powerConsumptionKw() const
 {
     QReadLocker lock(&m_stateLock);
     return m_powerConsumptionKw;
 }
 
+/// @brief Returns battery-cell temperatures under the state read lock.
 QVariantList MqttFlightTelemetryService::batteryCellTemperatures() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_batteryCellTemperatures);
 }
 
+/// @brief Returns bus voltage under the state read lock.
 double MqttFlightTelemetryService::busVoltage() const
 {
     QReadLocker lock(&m_stateLock);
     return m_busVoltage;
 }
 
+/// @brief Returns bus current under the state read lock.
 double MqttFlightTelemetryService::busCurrent() const
 {
     QReadLocker lock(&m_stateLock);
     return m_busCurrent;
 }
 
+/// @brief Returns motor temperatures under the state read lock.
 QVariantList MqttFlightTelemetryService::motorTemperatures() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_motorTemperatures);
 }
 
+/// @brief Returns motor speeds under the state read lock.
 QVariantList MqttFlightTelemetryService::motorRpmValues() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_motorRpmValues);
 }
 
+/// @brief Returns propulsion tilt angle under the state read lock.
 double MqttFlightTelemetryService::tiltAngleDeg() const
 {
     QReadLocker lock(&m_stateLock);
     return m_tiltAngleDeg;
 }
 
+/// @brief Returns thrust outputs under the state read lock.
 QVariantList MqttFlightTelemetryService::thrustOutputs() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_thrustOutputs);
 }
 
+/// @brief Returns inverter voltages under the state read lock.
 QVariantList MqttFlightTelemetryService::inverterVoltages() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_inverterVoltages);
 }
 
+/// @brief Returns inverter currents under the state read lock.
 QVariantList MqttFlightTelemetryService::inverterCurrents() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_inverterCurrents);
 }
 
+/// @brief Returns inverter health values under the state read lock.
 QVariantList MqttFlightTelemetryService::inverterHealth() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_inverterHealth);
 }
 
+/// @brief Returns GPS latitude under the state read lock.
 double MqttFlightTelemetryService::gpsLatitude() const
 {
     QReadLocker lock(&m_stateLock);
     return m_gpsLatitude;
 }
 
+/// @brief Returns GPS longitude under the state read lock.
 double MqttFlightTelemetryService::gpsLongitude() const
 {
     QReadLocker lock(&m_stateLock);
     return m_gpsLongitude;
 }
 
+/// @brief Returns recent calibrated-airspeed samples.
 QVariantList MqttFlightTelemetryService::casHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_casHistory);
 }
 
+/// @brief Returns recent barometric-altitude samples.
 QVariantList MqttFlightTelemetryService::altHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_altHistory);
 }
 
+/// @brief Returns recent vertical-speed samples.
 QVariantList MqttFlightTelemetryService::vsHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_vsHistory);
 }
 
+/// @brief Returns recent combined attitude-load samples.
 QVariantList MqttFlightTelemetryService::attitudeHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_attitudeHistory);
 }
 
+/// @brief Returns recent heading samples.
 QVariantList MqttFlightTelemetryService::headingHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_headingHistory);
 }
 
+/// @brief Returns recent flight-path-vector error samples.
 QVariantList MqttFlightTelemetryService::fpvHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_fpvHistory);
 }
 
+/// @brief Returns recent average motor-speed samples.
 QVariantList MqttFlightTelemetryService::propulsionRpmHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_propulsionRpmHistory);
 }
 
+/// @brief Returns recent propulsion tilt samples.
 QVariantList MqttFlightTelemetryService::propulsionTiltHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_propulsionTiltHistory);
 }
 
+/// @brief Returns recent average motor-temperature samples.
 QVariantList MqttFlightTelemetryService::propulsionTempHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_propulsionTempHistory);
 }
 
+/// @brief Returns recent total-thrust samples.
 QVariantList MqttFlightTelemetryService::propulsionThrustHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_propulsionThrustHistory);
 }
 
+/// @brief Returns recent average inverter-health samples.
 QVariantList MqttFlightTelemetryService::propulsionInverterHealthHistory() const
 {
     QReadLocker lock(&m_stateLock);
     return historyToVariantList(m_propulsionInverterHealthHistory);
 }
 
+/// @brief Applies a normalized payload to service state and bounded histories.
+/// @param payload Decoded telemetry fields.
 void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
 {
     QWriteLocker lock(&m_stateLock);
     QStringList validationErrors;
 
+    // Preserve fixed component counts and collect validation failures for later reporting.
     const auto replaceFixedValues = [&validationErrors](QVector<double> &target,
                                                          const QVariantList &values,
                                                          int expectedSize,
@@ -457,6 +548,7 @@ void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
         }
     };
 
+    // Apply scalar flight values, retaining previous values for omitted fields.
     m_telemetry.setCas(payload.value(QStringLiteral("cas"), m_telemetry.cas()).toDouble());
     m_telemetry.setTas(payload.value(QStringLiteral("tas"), m_telemetry.tas()).toDouble());
     m_telemetry.setAltBaro(payload.value(QStringLiteral("altBaro"), m_telemetry.altBaro()).toDouble());
@@ -536,6 +628,7 @@ void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
         }
     }
 
+    // Update raw and aggregate trend series from the accepted state snapshot.
     appendHistory(m_casHistory, m_telemetry.cas());
     appendHistory(m_altHistory, m_telemetry.altBaro());
     appendHistory(m_vsHistory, m_telemetry.vs());
@@ -573,6 +666,7 @@ void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
         appendHistory(m_propulsionInverterHealthHistory, healthTotal / m_inverterHealth.size());
     }
 
+    // Release state protection before notifying observers or reporting validation errors.
     lock.unlock();
     for (const QString &validationError : validationErrors) {
         emit errorOccurred(validationError);
@@ -580,23 +674,27 @@ void MqttFlightTelemetryService::onTelemetryDecoded(const QVariantMap &payload)
     emit telemetryChanged();
 }
 
+/// @brief Restricts a value to the supplied inclusive range.
 double MqttFlightTelemetryService::clamp(double value, double minimumValue, double maximumValue)
 {
     return qMax(minimumValue, qMin(maximumValue, value));
 }
 
+/// @brief Calculates the shortest absolute separation between two headings.
 double MqttFlightTelemetryService::wrappedAngleDeltaDegrees(double angleA, double angleB)
 {
     const double wrapped = std::fmod((angleA - angleB) + 540.0, 360.0) - 180.0;
     return qAbs(wrapped);
 }
 
+/// @brief Maps a normalized value into a presentation band.
 double MqttFlightTelemetryService::mapToBand(double normalizedValue, double bandMinimum, double bandMaximum)
 {
     const double clamped = unitClamp(normalizedValue);
     return bandMinimum + (bandMaximum - bandMinimum) * clamped;
 }
 
+/// @brief Appends a sample while retaining the latest 24 values.
 void MqttFlightTelemetryService::appendHistory(QVector<double> &history, double value)
 {
     history.append(value);
@@ -605,6 +703,7 @@ void MqttFlightTelemetryService::appendHistory(QVector<double> &history, double 
     }
 }
 
+/// @brief Converts an internal numeric history for QML consumption.
 QVariantList MqttFlightTelemetryService::historyToVariantList(const QVector<double> &history) const
 {
     QVariantList values;

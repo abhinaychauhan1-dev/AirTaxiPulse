@@ -1,20 +1,33 @@
+/**
+ * @file    : src/services/FlightSimulationService.cpp
+ * @brief   : Implements simulated flight telemetry and trend histories.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 #include "FlightSimulationService.h"
 
 #include <QtMath>
 #include <cmath>
 
 namespace {
+/// @brief Calculates the shortest absolute separation between two headings.
 double wrappedAngleDeltaDegrees(double angleA, double angleB)
 {
     const double wrapped = std::fmod((angleA - angleB) + 540.0, 360.0) - 180.0;
     return qAbs(wrapped);
 }
 
+/// @brief Constrains a normalized value to the range 0.0 to 1.0.
 double unitClamp(double value)
 {
     return qMax(0.0, qMin(1.0, value));
 }
 
+/// @brief Maps a normalized value into a presentation band.
 double mapToBand(double normalizedValue, double bandMinimum, double bandMaximum)
 {
     const double clamped = unitClamp(normalizedValue);
@@ -22,6 +35,8 @@ double mapToBand(double normalizedValue, double bandMinimum, double bandMaximum)
 }
 }
 
+/// @brief Constructs and starts the periodic flight telemetry simulation.
+/// @param parent Optional QObject that owns the service.
 FlightSimulationService::FlightSimulationService(QObject *parent)
     : QObject(parent)
     , m_phase(0.0)
@@ -43,6 +58,7 @@ FlightSimulationService::FlightSimulationService(QObject *parent)
     , m_gpsLongitude(-122.4194)
     , m_telemetry()
 {
+    // Seed each trend with enough variation for an informative initial display.
     appendHistory(m_casHistory, m_telemetry.cas() * 0.96);
     appendHistory(m_casHistory, m_telemetry.cas() * 0.98);
     appendHistory(m_casHistory, m_telemetry.cas());
@@ -96,96 +112,146 @@ FlightSimulationService::FlightSimulationService(QObject *parent)
     m_timer.start(500);
 }
 
+/// @brief Returns the service-owned telemetry object exposed to QML.
+/// @return Mutable pointer to the current telemetry data.
 FlightTelemetryData *FlightSimulationService::telemetry() const
 {
     return const_cast<FlightTelemetryData *>(&m_telemetry);
 }
 
+/// @brief Returns calibrated airspeed in knots.
 double FlightSimulationService::cas() const { return m_telemetry.cas(); }
+/// @brief Returns true airspeed in knots.
 double FlightSimulationService::tas() const { return m_telemetry.tas(); }
+/// @brief Returns barometric altitude in feet.
 double FlightSimulationService::altBaro() const { return m_telemetry.altBaro(); }
+/// @brief Returns radar altitude in feet.
 double FlightSimulationService::altRadar() const { return m_telemetry.altRadar(); }
+/// @brief Returns vertical speed in feet per minute.
 double FlightSimulationService::vs() const { return m_telemetry.vs(); }
+/// @brief Returns pitch in degrees.
 double FlightSimulationService::pitch() const { return m_telemetry.pitch(); }
+/// @brief Returns roll in degrees.
 double FlightSimulationService::roll() const { return m_telemetry.roll(); }
+/// @brief Returns yaw in degrees.
 double FlightSimulationService::yaw() const { return m_telemetry.yaw(); }
+/// @brief Returns heading in degrees.
 double FlightSimulationService::heading() const { return m_telemetry.heading(); }
+/// @brief Returns ground track in degrees.
 double FlightSimulationService::track() const { return m_telemetry.track(); }
 
+/// @brief Returns calibrated-airspeed progress mapped to the display band.
 double FlightSimulationService::casProgress() const
 {
     const double normalizedSpeed = clamp((m_telemetry.cas() - 20.0) / 130.0, 0.0, 1.0);
     return mapToBand(normalizedSpeed, 0.38, 0.78);
 }
+/// @brief Returns blended-altitude progress mapped to the display band.
 double FlightSimulationService::altProgress() const
 {
     const double blendedAltitude = m_telemetry.altBaro() * 0.82 + m_telemetry.altRadar() * 0.18;
     const double normalizedAltitude = clamp(blendedAltitude / 2200.0, 0.0, 1.0);
     return mapToBand(normalizedAltitude, 0.55, 0.92);
 }
+/// @brief Returns vertical-speed progress mapped to the display band.
 double FlightSimulationService::vsProgress() const
 {
     const double normalizedVerticalSpeed = clamp(qAbs(m_telemetry.vs()) / 1600.0, 0.0, 1.0);
     return mapToBand(normalizedVerticalSpeed, 0.18, 0.88);
 }
+/// @brief Returns attitude-stability progress mapped to the display band.
 double FlightSimulationService::attitudeProgress() const
 {
     const double attitudeLoad = qAbs(m_telemetry.pitch()) * 0.7 + qAbs(m_telemetry.roll()) * 0.45;
     const double normalizedStability = clamp(1.0 - attitudeLoad / 18.0, 0.0, 1.0);
     return mapToBand(normalizedStability, 0.32, 0.82);
 }
+/// @brief Returns heading-derived progress mapped to the display band.
 double FlightSimulationService::headingProgress() const
 {
     const double headingWave = 0.5 + 0.5 * qSin(qDegreesToRadians(m_telemetry.heading() * 1.8));
     return mapToBand(headingWave, 0.30, 0.70);
 }
+/// @brief Returns flight-path alignment progress.
 double FlightSimulationService::fpvProgress() const
 {
     const double pathError = wrappedAngleDeltaDegrees(m_telemetry.track(), m_telemetry.heading());
     const double verticalPenalty = qAbs(m_telemetry.vs()) / 2200.0;
     return clamp(1.0 - pathError / 18.0 - verticalPenalty * 0.25, 0.0, 1.0);
 }
+/// @brief Returns the active simulated flight mode label.
 QString FlightSimulationService::flightModeLabel() const { return m_flightModeLabel; }
+/// @brief Returns the vertical-speed status color.
 QColor FlightSimulationService::vsAccentColor() const { return m_telemetry.vs() >= 0.0 ? QColor("#79d57a") : QColor("#e07c7c"); }
+/// @brief Returns the vertical-speed trend label.
 QString FlightSimulationService::vsTrendLabel() const { return m_telemetry.vs() >= 0.0 ? QStringLiteral("Ascending") : QStringLiteral("Descending"); }
+/// @brief Returns signed vertical-speed text with units.
 QString FlightSimulationService::vsValueText() const
 {
     const QString sign = m_telemetry.vs() >= 0.0 ? QStringLiteral("+") : QStringLiteral("-");
     return sign + QString::number(qAbs(m_telemetry.vs()), 'f', 0) + QStringLiteral(" ft/min");
 }
+/// @brief Returns battery state of charge as a percentage.
 double FlightSimulationService::batterySoc() const { return m_batterySoc; }
+/// @brief Returns battery state of health as a percentage.
 double FlightSimulationService::batterySoh() const { return m_batterySoh; }
+/// @brief Returns propulsion power consumption in kilowatts.
 double FlightSimulationService::powerConsumptionKw() const { return m_powerConsumptionKw; }
+/// @brief Returns battery-cell temperatures in degrees Celsius.
 QVariantList FlightSimulationService::batteryCellTemperatures() const { return historyToVariantList(m_batteryCellTemperatures); }
+/// @brief Returns high-voltage bus voltage in volts.
 double FlightSimulationService::busVoltage() const { return m_busVoltage; }
+/// @brief Returns high-voltage bus current in amperes.
 double FlightSimulationService::busCurrent() const { return m_busCurrent; }
+/// @brief Returns motor temperatures in degrees Celsius.
 QVariantList FlightSimulationService::motorTemperatures() const { return historyToVariantList(m_motorTemperatures); }
+/// @brief Returns motor speeds in revolutions per minute.
 QVariantList FlightSimulationService::motorRpmValues() const { return historyToVariantList(m_motorRpmValues); }
+/// @brief Returns propulsion tilt angle in degrees.
 double FlightSimulationService::tiltAngleDeg() const { return m_tiltAngleDeg; }
+/// @brief Returns front and rear thrust outputs.
 QVariantList FlightSimulationService::thrustOutputs() const { return historyToVariantList(m_thrustOutputs); }
+/// @brief Returns per-inverter voltages.
 QVariantList FlightSimulationService::inverterVoltages() const { return historyToVariantList(m_inverterVoltages); }
+/// @brief Returns per-inverter currents.
 QVariantList FlightSimulationService::inverterCurrents() const { return historyToVariantList(m_inverterCurrents); }
+/// @brief Returns per-inverter health percentages.
 QVariantList FlightSimulationService::inverterHealth() const { return historyToVariantList(m_inverterHealth); }
+/// @brief Returns simulated GPS latitude in decimal degrees.
 double FlightSimulationService::gpsLatitude() const { return m_gpsLatitude; }
+/// @brief Returns simulated GPS longitude in decimal degrees.
 double FlightSimulationService::gpsLongitude() const { return m_gpsLongitude; }
 
+/// @brief Returns recent calibrated-airspeed samples.
 QVariantList FlightSimulationService::casHistory() const { return historyToVariantList(m_casHistory); }
+/// @brief Returns recent barometric-altitude samples.
 QVariantList FlightSimulationService::altHistory() const { return historyToVariantList(m_altHistory); }
+/// @brief Returns recent vertical-speed samples.
 QVariantList FlightSimulationService::vsHistory() const { return historyToVariantList(m_vsHistory); }
+/// @brief Returns recent combined attitude-load samples.
 QVariantList FlightSimulationService::attitudeHistory() const { return historyToVariantList(m_attitudeHistory); }
+/// @brief Returns recent heading samples.
 QVariantList FlightSimulationService::headingHistory() const { return historyToVariantList(m_headingHistory); }
+/// @brief Returns recent flight-path-vector error samples.
 QVariantList FlightSimulationService::fpvHistory() const { return historyToVariantList(m_fpvHistory); }
+/// @brief Returns recent average motor-speed samples.
 QVariantList FlightSimulationService::propulsionRpmHistory() const { return historyToVariantList(m_propulsionRpmHistory); }
+/// @brief Returns recent propulsion tilt samples.
 QVariantList FlightSimulationService::propulsionTiltHistory() const { return historyToVariantList(m_propulsionTiltHistory); }
+/// @brief Returns recent average motor-temperature samples.
 QVariantList FlightSimulationService::propulsionTempHistory() const { return historyToVariantList(m_propulsionTempHistory); }
+/// @brief Returns recent total-thrust samples.
 QVariantList FlightSimulationService::propulsionThrustHistory() const { return historyToVariantList(m_propulsionThrustHistory); }
+/// @brief Returns recent average inverter-health samples.
 QVariantList FlightSimulationService::propulsionInverterHealthHistory() const { return historyToVariantList(m_propulsionInverterHealthHistory); }
 
+/// @brief Restricts a value to the supplied inclusive range.
 double FlightSimulationService::clamp(double value, double minimumValue, double maximumValue)
 {
     return qMax(minimumValue, qMin(maximumValue, value));
 }
 
+/// @brief Appends a sample while retaining the latest 24 values.
 void FlightSimulationService::appendHistory(QVector<double> &history, double value)
 {
     history.append(value);
@@ -194,6 +260,7 @@ void FlightSimulationService::appendHistory(QVector<double> &history, double val
     }
 }
 
+/// @brief Converts an internal numeric history for QML consumption.
 QVariantList FlightSimulationService::historyToVariantList(const QVector<double> &history) const
 {
     QVariantList values;
@@ -204,10 +271,12 @@ QVariantList FlightSimulationService::historyToVariantList(const QVector<double>
     return values;
 }
 
+/// @brief Advances the repeating flight profile and publishes the resulting telemetry.
 void FlightSimulationService::updateSimulation()
 {
     m_phase += 0.24;
 
+    // Select target values for the current operational phase of the flight cycle.
     const double cyclePosition = std::fmod(m_phase, 40.0);
     double targetCas = 0.0;
     double targetTas = 0.0;
@@ -333,6 +402,7 @@ void FlightSimulationService::updateSimulation()
         targetPowerConsumptionKw = 440.0 - approachPhase * 20.0;
     }
 
+    // Slew each measurement toward its target to avoid discontinuities at phase boundaries.
     auto approach = [](double current, double target, double maxStep) {
         const double delta = target - current;
         if (delta > maxStep) {
@@ -366,6 +436,7 @@ void FlightSimulationService::updateSimulation()
     m_telemetry.setHeading(newHeading);
     m_telemetry.setTrack(newTrack);
 
+    // Update propulsion, inverter, and energy values with component-level variation.
     for (int i = 0; i < m_motorRpmValues.size(); ++i) {
         const double rpmOffset = (i - 1.5) * 32.0;
         const double rpmWave = 26.0 * qSin(m_phase * 0.74 + i * 0.37);
@@ -413,6 +484,7 @@ void FlightSimulationService::updateSimulation()
     m_gpsLatitude += 0.000045 * qCos(qDegreesToRadians(newTrack));
     m_gpsLongitude += 0.000045 * qSin(qDegreesToRadians(newTrack));
 
+    // Record the latest aggregate values for bounded trend displays.
     appendHistory(m_casHistory, m_telemetry.cas());
     appendHistory(m_altHistory, m_telemetry.altBaro());
     appendHistory(m_vsHistory, m_telemetry.vs());

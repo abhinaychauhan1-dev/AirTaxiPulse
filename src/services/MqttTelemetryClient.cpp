@@ -1,3 +1,13 @@
+/**
+ * @file    : src/services/MqttTelemetryClient.cpp
+ * @brief   : Implements MQTT subscription, parsing, and backlog handling.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 #include "MqttTelemetryClient.h"
 
 #include <QDateTime>
@@ -10,6 +20,8 @@
 #include <QMutexLocker>
 #include <QtConcurrent/QtConcurrentRun>
 
+/// @brief Constructs the MQTT client and wires broker lifecycle callbacks.
+/// @param parent Optional QObject that owns the client.
 MqttTelemetryClient::MqttTelemetryClient(QObject *parent)
     : QObject(parent)
     , m_client(this)
@@ -28,6 +40,7 @@ MqttTelemetryClient::MqttTelemetryClient(QObject *parent)
     m_client.setPort(m_port);
     m_client.setClientId(QStringLiteral("AirTaxiPulseClient"));
 
+    // Forward broker state, message, and error callbacks through the client API.
     connect(&m_client, &QMqttClient::stateChanged,
             this, &MqttTelemetryClient::handleStateChanged);
     connect(&m_client, &QMqttClient::messageReceived,
@@ -43,11 +56,14 @@ MqttTelemetryClient::MqttTelemetryClient(QObject *parent)
             });
 }
 
+/// @brief Returns the configured broker host.
 QString MqttTelemetryClient::host() const
 {
     return m_host;
 }
 
+/// @brief Updates the broker host when the value changes.
+/// @param host Broker hostname or IP address.
 void MqttTelemetryClient::setHost(const QString &host)
 {
     if (m_host == host) {
@@ -58,11 +74,14 @@ void MqttTelemetryClient::setHost(const QString &host)
     emit connectionConfigChanged();
 }
 
+/// @brief Returns the configured broker port.
 quint16 MqttTelemetryClient::port() const
 {
     return m_port;
 }
 
+/// @brief Updates the broker port when the value changes.
+/// @param port MQTT broker port.
 void MqttTelemetryClient::setPort(quint16 port)
 {
     if (m_port == port) {
@@ -73,11 +92,14 @@ void MqttTelemetryClient::setPort(quint16 port)
     emit connectionConfigChanged();
 }
 
+/// @brief Returns the configured telemetry topic filter.
 QString MqttTelemetryClient::topicFilter() const
 {
     return m_topicFilter;
 }
 
+/// @brief Updates the telemetry topic filter when the value changes.
+/// @param topicFilter MQTT subscription filter.
 void MqttTelemetryClient::setTopicFilter(const QString &topicFilter)
 {
     if (m_topicFilter == topicFilter) {
@@ -87,16 +109,20 @@ void MqttTelemetryClient::setTopicFilter(const QString &topicFilter)
     emit connectionConfigChanged();
 }
 
+/// @brief Returns whether the broker connection is established.
 bool MqttTelemetryClient::connected() const
 {
     return m_client.state() == QMqttClient::Connected;
 }
 
+/// @brief Returns whether asynchronous raw payload logging is enabled.
 bool MqttTelemetryClient::asyncPayloadLoggingEnabled() const
 {
     return m_asyncPayloadLoggingEnabled;
 }
 
+/// @brief Enables or disables asynchronous raw payload logging.
+/// @param enabled true to append received payloads to the diagnostic log.
 void MqttTelemetryClient::setAsyncPayloadLoggingEnabled(bool enabled)
 {
     if (m_asyncPayloadLoggingEnabled == enabled) {
@@ -106,11 +132,14 @@ void MqttTelemetryClient::setAsyncPayloadLoggingEnabled(bool enabled)
     emit connectionConfigChanged();
 }
 
+/// @brief Returns the maximum number of simultaneous parser tasks.
 int MqttTelemetryClient::maxConcurrentParsers() const
 {
     return m_maxConcurrentParsers;
 }
 
+/// @brief Updates the parser concurrency limit and schedules waiting work.
+/// @param maxConcurrentParsers Requested limit, normalized to at least one.
 void MqttTelemetryClient::setMaxConcurrentParsers(int maxConcurrentParsers)
 {
     const int normalized = qMax(1, maxConcurrentParsers);
@@ -122,11 +151,14 @@ void MqttTelemetryClient::setMaxConcurrentParsers(int maxConcurrentParsers)
     scheduleNextParsers();
 }
 
+/// @brief Returns the maximum number of queued payloads.
 int MqttTelemetryClient::maxPendingMessages() const
 {
     return m_maxPendingMessages;
 }
 
+/// @brief Updates the pending capacity and discards the oldest excess payloads.
+/// @param maxPendingMessages Requested capacity, normalized to at least one.
 void MqttTelemetryClient::setMaxPendingMessages(int maxPendingMessages)
 {
     const int normalized = qMax(1, maxPendingMessages);
@@ -143,17 +175,22 @@ void MqttTelemetryClient::setMaxPendingMessages(int maxPendingMessages)
     emit backlogStatsChanged();
 }
 
+/// @brief Returns the cumulative number of payloads dropped from the backlog.
 quint64 MqttTelemetryClient::droppedMessageCount() const
 {
     return m_droppedMessageCount;
 }
 
+/// @brief Configures credentials for subsequent broker connections.
+/// @param username MQTT username.
+/// @param password MQTT password.
 void MqttTelemetryClient::setCredentials(const QString &username, const QString &password)
 {
     m_client.setUsername(username);
     m_client.setPassword(password);
 }
 
+/// @brief Starts a broker connection unless one is already active or pending.
 void MqttTelemetryClient::connectToBroker()
 {
     if (m_client.state() == QMqttClient::Connected ||
@@ -163,6 +200,7 @@ void MqttTelemetryClient::connectToBroker()
     m_client.connectToHost();
 }
 
+/// @brief Disconnects from the broker when a connection exists.
 void MqttTelemetryClient::disconnectFromBroker()
 {
     if (m_client.state() == QMqttClient::Disconnected) {
@@ -171,6 +209,8 @@ void MqttTelemetryClient::disconnectFromBroker()
     m_client.disconnectFromHost();
 }
 
+/// @brief Handles broker state changes and subscribes after connection.
+/// @param state New MQTT client state.
 void MqttTelemetryClient::handleStateChanged(QMqttClient::ClientState state)
 {
     emit connectedChanged();
@@ -184,6 +224,9 @@ void MqttTelemetryClient::handleStateChanged(QMqttClient::ClientState state)
     }
 }
 
+/// @brief Queues a received payload for decoding and optional asynchronous logging.
+/// @param message Raw MQTT payload.
+/// @param topic Source MQTT topic.
 void MqttTelemetryClient::handleMessageReceived(const QByteArray &message, const QMqttTopicName &topic)
 {
     const QByteArray messageCopy = message;
@@ -198,8 +241,12 @@ void MqttTelemetryClient::handleMessageReceived(const QByteArray &message, const
     }
 }
 
+/// @brief Adds a payload to the bounded parser backlog.
+/// @param message Raw payload to decode.
+/// @param topicName Source MQTT topic name.
 void MqttTelemetryClient::enqueueForProcessing(const QByteArray &message, const QString &topicName)
 {
+    // Drop the oldest queued item under pressure while preserving sequence continuity.
     if (m_pendingPayloads.size() >= m_maxPendingMessages) {
         const PendingPayload dropped = m_pendingPayloads.dequeue();
         completePayload(dropped.sequence, {});
@@ -211,6 +258,7 @@ void MqttTelemetryClient::enqueueForProcessing(const QByteArray &message, const 
     scheduleNextParsers();
 }
 
+/// @brief Starts queued decode tasks up to the configured concurrency limit.
 void MqttTelemetryClient::scheduleNextParsers()
 {
     while (m_activeParsers < m_maxConcurrentParsers && !m_pendingPayloads.isEmpty()) {
@@ -221,6 +269,7 @@ void MqttTelemetryClient::scheduleNextParsers()
         connect(watcher, &QFutureWatcher<QVariantMap>::finished,
                 this,
                 [this, watcher, sequence = pending.sequence]() {
+                    // Return completion handling to the client thread before scheduling more work.
                     const QVariantMap decoded = watcher->result();
                     watcher->deleteLater();
                     --m_activeParsers;
@@ -235,6 +284,9 @@ void MqttTelemetryClient::scheduleNextParsers()
     }
 }
 
+/// @brief Publishes completed payloads in their original receive order.
+/// @param sequence Receive-order sequence number.
+/// @param payload Decoded payload, or an empty map for invalid or dropped input.
 void MqttTelemetryClient::completePayload(quint64 sequence, const QVariantMap &payload)
 {
     m_completedPayloads.insert(sequence, payload);
@@ -246,6 +298,9 @@ void MqttTelemetryClient::completePayload(quint64 sequence, const QVariantMap &p
     }
 }
 
+/// @brief Decodes JSON telemetry and normalizes supported field aliases.
+/// @param message Raw JSON payload.
+/// @return Normalized telemetry map, or an empty map when decoding fails.
 QVariantMap MqttTelemetryClient::decodePayload(const QByteArray &message)
 {
     QJsonParseError parseError;
@@ -257,6 +312,7 @@ QVariantMap MqttTelemetryClient::decodePayload(const QByteArray &message)
     const QJsonObject object = document.object();
     QVariantMap payload;
 
+    // Accept camelCase and snake_case producer schemas under canonical service keys.
     const auto insertOptionalNumber = [&object, &payload](const QString &targetKey, const QStringList &keys) {
         for (const QString &key : keys) {
             const QJsonValue value = object.value(key);
@@ -454,8 +510,12 @@ QVariantMap MqttTelemetryClient::decodePayload(const QByteArray &message)
     return payload;
 }
 
+/// @brief Appends a timestamped raw MQTT payload to the diagnostic log.
+/// @param topicName Source MQTT topic.
+/// @param message Raw MQTT payload.
 void MqttTelemetryClient::appendPayloadLogLine(const QString &topicName, const QByteArray &message)
 {
+    // Serialize writes from independent logging tasks to keep each record intact.
     static QMutex logMutex;
     QMutexLocker locker(&logMutex);
 

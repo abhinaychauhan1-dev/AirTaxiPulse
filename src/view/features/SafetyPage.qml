@@ -1,9 +1,20 @@
+/**
+ * @file    : src/view/features/SafetyPage.qml
+ * @brief   : Defines the aircraft safety and health monitoring page.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 pragma ComponentBehavior: Bound
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
+// This dashboard consolidates aircraft safety, emergency, and navigation monitoring.
 Item {
     id: root
     required property var moduleRegistry
@@ -37,12 +48,14 @@ Item {
     readonly property bool gnssTestMode: root.safety.gnssTestMode
     readonly property int alertCount: root.safety.alertCount
 
+    // These adapters expose safety-system values to the monitoring panels.
     function monitorCode(index) { return root.safety.monitorCode(index) }
     function monitorSummary(index) { return root.safety.monitorSummaries[index] }
     function signed(value) { return root.safety.signedValue(value) }
     function trafficCode(index) { return root.safety.trafficCode(index) }
     function trafficRange(index) { return root.safety.trafficRanges[index] }
     function trafficBearing(index) { return root.safety.trafficBearings[index] }
+    // These handlers focus the emergency panel before changing parachute state.
     function toggleParachuteArm() {
         root.selectedMonitor = 1
         root.safety.toggleParachuteArm()
@@ -52,6 +65,7 @@ Item {
         root.safety.deployOrResetParachute()
     }
 
+    // Safety-state changes repaint each canvas-based visualization.
     Connections {
         target: root.safety
         function onStateChanged() {
@@ -62,11 +76,13 @@ Item {
         }
     }
 
+    // The page content arranges monitor selection above the safety dashboard.
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 4
         spacing: 6
 
+        // The page header summarizes overall advisory state.
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 43
@@ -115,6 +131,7 @@ Item {
             }
         }
 
+        // The monitor selector focuses a safety domain and displays its summary.
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 31
@@ -154,6 +171,7 @@ Item {
             }
         }
 
+        // The dashboard groups acoustic, emergency, traffic, GNSS, and landing monitors.
         GridLayout {
             id: safetyGrid
             Layout.fillWidth: true
@@ -163,6 +181,7 @@ Item {
             columnSpacing: 6
             rowSpacing: 6
 
+            // The acoustic panel charts cabin and community noise against the selected limit.
             Rectangle {
                 Layout.row: 0
                 Layout.column: 0
@@ -212,6 +231,7 @@ Item {
                             }
                         }
                     }
+                    // The noise canvas plots recent acoustic history and the compliance threshold.
                     Canvas {
                         id: noiseCanvas
                         Layout.fillWidth: true
@@ -239,6 +259,7 @@ Item {
                 }
             }
 
+            // The parachute panel manages arming, deployment, and simulated reset state.
             Rectangle {
                 Layout.row: 0
                 Layout.column: 2
@@ -279,6 +300,7 @@ Item {
                     Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
+                        // The parachute canvas visualizes canopy extraction and deployment progress.
                         Canvas {
                             id: parachuteCanvas
                             anchors.fill: parent
@@ -374,6 +396,7 @@ Item {
                 }
             }
 
+            // The traffic panel presents collision threats on a selectable-range display.
             Rectangle {
                 Layout.row: 0
                 Layout.column: 4
@@ -411,6 +434,7 @@ Item {
                     RowLayout {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
+                        // The traffic canvas plots nearby aircraft by bearing and range.
                         Canvas {
                             id: trafficCanvas
                             Layout.fillWidth: true
@@ -461,6 +485,7 @@ Item {
                 }
             }
 
+            // The GNSS panel reports satellite coverage, accuracy, and integrity testing.
             Rectangle {
                 Layout.row: 1
                 Layout.column: 0
@@ -536,6 +561,7 @@ Item {
                 }
             }
 
+            // The alignment panel visualizes vertiport approach deviation and capture quality.
             Rectangle {
                 Layout.row: 1
                 Layout.column: 3
@@ -579,6 +605,7 @@ Item {
                     RowLayout {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
+                        // The alignment canvas plots lateral and vertical deviation from the target.
                         Canvas {
                             id: alignmentCanvas
                             Layout.fillWidth: true

@@ -1,9 +1,20 @@
+/**
+ * @file    : src/view/features/FcsPage.qml
+ * @brief   : Defines the flight control and automation systems page.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 pragma ComponentBehavior: Bound
 
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
+// This dashboard manages flight-control modes, actuators, and route guidance.
 Item {
     id: root
     required property var moduleRegistry
@@ -24,6 +35,7 @@ Item {
     readonly property int activeWaypoint: root.hoveredWaypoint >= 0
                                           ? root.hoveredWaypoint : root.fcs.navigationWaypoint
 
+    // These adapters expose flight-control commands and values to the interactive panels.
     function modeName(index) { return root.fcs.modeName(index) }
     function guidanceName(index) { return root.fcs.guidanceName(index) }
     function actuatorName(index) { return root.fcs.actuatorName(index) }
@@ -33,11 +45,13 @@ Item {
     function toggleAutopilot() { root.fcs.toggleAutopilot() }
     function setManualActuator(index, value) { root.fcs.setManualActuator(index, value) }
     function resumeAutomaticRoute() { root.fcs.resumeAutomaticRoute() }
+    // This handler activates a direct-to waypoint and clears transient hover selection.
     function selectDirectTo(index) {
         root.fcs.selectDirectTo(index)
         root.hoveredWaypoint = -1
     }
 
+    // The route timer advances the active-leg pulse on the flight-plan display.
     Timer {
         interval: 50
         running: root.visible
@@ -48,11 +62,13 @@ Item {
         }
     }
 
+    // The page content arranges mode controls above automation and route panels.
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 4
         spacing: 6
 
+        // The page header reports command authority and autopilot engagement.
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 43
@@ -128,6 +144,7 @@ Item {
             }
         }
 
+        // The flight-mode strip selects and highlights the commanded mission phase.
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 54
@@ -190,6 +207,7 @@ Item {
             }
         }
 
+        // The dashboard groups automation authority, actuator response, and route management.
         GridLayout {
             id: dashboard
             Layout.fillWidth: true
@@ -199,6 +217,7 @@ Item {
             columnSpacing: 6
             rowSpacing: 6
 
+            // The autopilot panel controls guidance mode and control-law authority.
             Rectangle {
                 Layout.row: 0
                 Layout.column: 0
@@ -294,6 +313,7 @@ Item {
                 }
             }
 
+            // The actuator panel visualizes commanded and measured surface deflections.
             Rectangle {
                 Layout.row: 0
                 Layout.column: 2
@@ -406,6 +426,7 @@ Item {
                 }
             }
 
+            // The route panel combines the active flight plan with waypoint controls.
             Rectangle {
                 Layout.row: 1
                 Layout.column: 0
@@ -452,6 +473,7 @@ Item {
                             Label { text: "TRACK " + Number(root.flightModel.track).toFixed(0) + "°"; color: "#82b8c7"; font.pixelSize: 8; font.bold: true }
                         }
 
+                        // The route canvas draws the waypoint path, aircraft position, and active leg.
                         Canvas {
                             id: routeCanvas
                             Layout.fillWidth: true

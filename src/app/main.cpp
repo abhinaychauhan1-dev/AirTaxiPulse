@@ -1,3 +1,13 @@
+/**
+ * @file    : src/app/main.cpp
+ * @brief   : Starts the application and exposes backend services to QML.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 #include <QDir>
 #include <QCursor>
 #include <QDebug>
@@ -14,10 +24,15 @@
 #endif
 #include "../viewmodel/AirTaxiModuleRegistry.h"
 
+/// @brief Entry point for the Air Taxi Pulse application.
+/// @param argc Number of command-line arguments.
+/// @param argv Array of command-line arguments.
+/// @return Result code returned by the Qt application event loop.
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
 
+    // Select and configure the telemetry source from the runtime environment.
     const bool useMqttAsPrimary = qEnvironmentVariableIntValue("AIRTAXI_USE_MQTT") == 1;
     QObject *mqttTelemetryContext = nullptr;
     QScopedPointer<AirTaxiModuleRegistry> modules;
@@ -53,12 +68,14 @@ int main(int argc, char *argv[])
     modules.reset(new AirTaxiModuleRegistry());
 #endif
 
+    // Expose application services and view models to the QML layer.
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextProperty("airTaxiModules", modules.data());
     engine.rootContext()->setContextProperty("flightSimulation", modules->primaryFlight());
     engine.rootContext()->setContextProperty("mqttTelemetry", mqttTelemetryContext);
     engine.rootContext()->setContextProperty("mqttTelemetryAvailable", mqttTelemetryContext != nullptr);
 
+    // Resolve the QML entry point relative to the deployed executable.
     QDir dir(QCoreApplication::applicationDirPath());
     dir.cdUp();
     dir.cdUp();
@@ -72,6 +89,7 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
     engine.load(url);
 
+    // Size and center the application window on the active display.
     if (!engine.rootObjects().isEmpty()) {
         QWindow *window = qobject_cast<QWindow *>(engine.rootObjects().first());
         if (window) {

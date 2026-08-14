@@ -1,7 +1,18 @@
+/**
+ * @file    : src/view/features/FlightSimulationCard.qml
+ * @brief   : Defines a reusable card for telemetry metrics and trends.
+ * @author  : Abhinay Chauhan (email: abhinay.chauhan1@gmail.com)
+ * @version : 1.0.0
+ *
+ * Copyright (c) 2024
+ * Abhinay Chauhan. All rights reserved.
+ */
+
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 
+// This reusable card presents a telemetry metric, trend, and confidence state.
 Item {
     id: root
     implicitWidth: 320
@@ -57,6 +68,7 @@ Item {
         onExited: root.hovered = false
     }
 
+    // The animation timer advances icon, trend, and progress visualizations.
     Timer {
         interval: 60
         running: true
@@ -76,6 +88,7 @@ Item {
         root.motionPhase = root.motionSeed
     }
 
+    // The card content arranges identity, trend, progress, and caller-provided details.
     ColumnLayout {
         id: contentColumn
         anchors.left: parent.left
@@ -107,6 +120,7 @@ Item {
                     opacity: 0.25
                 }
 
+                // The icon canvas renders a metric-specific animated glyph.
                 Canvas {
                     id: iconCanvas
                     anchors.fill: parent
@@ -259,6 +273,7 @@ Item {
             Layout.fillWidth: true
         }
 
+        // The sparkline canvas renders a visualization tailored to the metric type.
         Canvas {
             id: sparkline
             visible: root.sparkValues && root.sparkValues.length > 1
@@ -739,6 +754,7 @@ Item {
             onHeightChanged: requestPaint()
         }
 
+        // The progress canvas displays confidence using the selected visual theme.
         Canvas {
             id: progressCanvas
             visible: root.showProgress
@@ -1082,6 +1098,7 @@ Item {
             Layout.preferredHeight: 2
         }
 
+        // The custom content region hosts metric details supplied by each card instance.
         ColumnLayout {
             id: customContentColumn
             Layout.fillWidth: true
